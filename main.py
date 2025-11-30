@@ -7,9 +7,10 @@ from fastapi.middleware.cors import CORSMiddleware
 import logging
 from contextlib import asynccontextmanager
 
-from models import AllocationRequest, AllocationDecision, HealthCheckResponse
+from entities import AllocationRequest, AllocationDecision, HealthCheckResponse
 from config import configuration
-from models.allocator import BaseAllocator, HeuristicAllocator
+from entities.allocator import BaseAllocator, HeuristicAllocator, NNAllocator
+from models.nn.neural_network import NeuralNetwork
 from utils import setup_logging
 
 # Setup logging
@@ -29,7 +30,7 @@ async def lifespan(app: FastAPI):
     logger.info(f"Starting {configuration.app_name} v{configuration.app_version}")
 
     # Initialize allocator
-    allocator = HeuristicAllocator()
+    allocator = NNAllocator(NeuralNetwork.parent_directory)
     logger.info("Task allocator initialized")
     logger.info("Task allocator and allocation logger initialized")
     logger.info(f"Model type: {configuration.model_type}")

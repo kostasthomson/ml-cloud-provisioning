@@ -1,8 +1,8 @@
 from typing import Optional, Tuple, List
 
 from config import configuration
-from models import AllocationRequest, VMAllocation, HardwareType, CellStatus
-from models.allocator import BaseAllocator
+from entities import AllocationRequest, VMAllocation, HardwareType, CellStatus
+from entities.allocator import BaseAllocator
 
 
 class HeuristicAllocator(BaseAllocator):
@@ -10,9 +10,6 @@ class HeuristicAllocator(BaseAllocator):
     Heuristic-based energy-aware allocation strategy.
     Optimizes for energy efficiency using predefined heuristics.
     """
-
-    def __init__(self):
-        super().__init__()
 
     def get_method_name(self) -> str:
         return "heuristic_energy_aware"

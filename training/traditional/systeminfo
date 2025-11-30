@@ -1,0 +1,311 @@
+=========== Global Parameters ===========
+Maximum Simulation Time: 1000 seconds
+Resource Allocation Mechanism: Traditional
+Update Interval: 100 seconds
+
+=========== Cell Parameters ===========
+Number of Cells: 3
+---------------------------------------
+    Cell: 1
+         Number of HW Types: 4
+         Cell Interconnection Bandwidth: 20 Gbps
+         Network Bandwidth Overcommitment ratio: 1
+              HW Type: 1
+                   Number of Servers: 25000
+                   Number of Proc. Units per Server:20
+                   Memory per Server: 128 GBytes
+                   Storage per Server: 1 TBytes
+                   Proc. Overcommitment ratio: 1
+                   Memory Overcommitment ratio: 1
+                   Compute Capability: 88000.8 MIPS
+                   Accelerators: 0
+                   Total Number of Accelerators per Server: 0
+                   Accelerator Compute Capability: 0 MIPS
+                   Type of CPU model: 3
+                   CPU Number of Points for Interpolation: 11
+                   CPU Utilization Bins: 0 0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9 1 
+                   CPU Power Consuption: 163 170.1251 172.6057 175.4264 179.7886 183.6121 189.9905 196.8095 206.3168 215.9316 220.2148 
+                   CPU Sleep Power Consumption: 163 Watts
+              HW Type: 2
+                   Number of Servers: 25000
+                   Number of Proc. Units per Server:20
+                   Memory per Server: 128 GBytes
+                   Storage per Server: 1 TBytes
+                   Proc. Overcommitment ratio: 1
+                   Memory Overcommitment ratio: 1
+                   Compute Capability: 88000.8 MIPS
+                   Accelerators: 1
+                   Total Number of Accelerators per Server: 4
+                   Accelerator Compute Capability: 587505.34 MIPS
+                   Type of CPU model: 3
+                   CPU Number of Points for Interpolation: 11
+                   CPU Utilization Bins: 0 0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9 1 
+                   CPU Power Consuption: 163 170.1251 172.6057 175.4264 179.7886 183.6121 189.9905 196.8095 206.3168 215.9316 220.2148 
+                   CPU Sleep Power Consumption: 163 Watts
+                   Type of Accelerator Model: -1
+                   Accelerator Idle Power Consumption: 32 Watts
+                   Accelerator Max Power Consumption: 250 Watts
+                   Accelerator Sleep Power Consumption: 32 Watts
+              HW Type: 3
+                   Number of Servers: 25000
+                   Number of Proc. Units per Server:20
+                   Memory per Server: 128 GBytes
+                   Storage per Server: 1 TBytes
+                   Proc. Overcommitment ratio: 1
+                   Memory Overcommitment ratio: 1
+                   Compute Capability: 88000.8 MIPS
+                   Accelerators: 1
+                   Total Number of Accelerators per Server: 4
+                   Accelerator Compute Capability: 507494.4 MIPS
+                   Type of CPU model: 3
+                   CPU Number of Points for Interpolation: 11
+                   CPU Utilization Bins: 0 0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9 1 
+                   CPU Power Consuption: 163 170.1251 172.6057 175.4264 179.7886 183.6121 189.9905 196.8095 206.3168 215.9316 220.2148 
+                   CPU Sleep Power Consumption: 163 Watts
+                   Type of Accelerator Model: -1
+                   Accelerator Idle Power Consumption: 176.8 Watts
+                   Accelerator Max Power Consumption: 225 Watts
+                   Accelerator Sleep Power Consumption: 17.3 Watts
+              HW Type: 4
+                   Number of Servers: 25000
+                   Number of Proc. Units per Server:20
+                   Memory per Server: 128 GBytes
+                   Storage per Server: 1 TBytes
+                   Proc. Overcommitment ratio: 1
+                   Memory Overcommitment ratio: 1
+                   Compute Capability: 88000.8 MIPS
+                   Accelerators: 1
+                   Total Number of Accelerators per Server: 4
+                   Accelerator Compute Capability: 295959.3 MIPS
+                   Type of CPU model: 3
+                   CPU Number of Points for Interpolation: 11
+                   CPU Utilization Bins: 0 0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9 1 
+                   CPU Power Consuption: 163 170.1251 172.6057 175.4264 179.7886 183.6121 189.9905 196.8095 206.3168 215.9316 220.2148 
+                   CPU Sleep Power Consumption: 163 Watts
+                   Type of Accelerator Model: 1
+                   Accelerator Idle Power Consumption: 17.3 Watts
+                   Accelerator Max Power Consumption: 25.1 Watts
+                   Accelerator Sleep Power Consumption: 17.3 Watts
+    =========== Broker ===========
+        Poll Interval for the Cell Manager: 20
+
+    Cell: 2
+         Number of HW Types: 4
+         Cell Interconnection Bandwidth: 20 Gbps
+         Network Bandwidth Overcommitment ratio: 1
+              HW Type: 1
+                   Number of Servers: 25000
+                   Number of Proc. Units per Server:20
+                   Memory per Server: 128 GBytes
+                   Storage per Server: 1 TBytes
+                   Proc. Overcommitment ratio: 1
+                   Memory Overcommitment ratio: 1
+                   Compute Capability: 88000.8 MIPS
+                   Accelerators: 0
+                   Total Number of Accelerators per Server: 0
+                   Accelerator Compute Capability: 0 MIPS
+                   Type of CPU model: 3
+                   CPU Number of Points for Interpolation: 11
+                   CPU Utilization Bins: 0 0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9 1 
+                   CPU Power Consuption: 163 170.1251 172.6057 175.4264 179.7886 183.6121 189.9905 196.8095 206.3168 215.9316 220.2148 
+                   CPU Sleep Power Consumption: 163 Watts
+              HW Type: 2
+                   Number of Servers: 25000
+                   Number of Proc. Units per Server:20
+                   Memory per Server: 128 GBytes
+                   Storage per Server: 1 TBytes
+                   Proc. Overcommitment ratio: 1
+                   Memory Overcommitment ratio: 1
+                   Compute Capability: 88000.8 MIPS
+                   Accelerators: 1
+                   Total Number of Accelerators per Server: 4
+                   Accelerator Compute Capability: 587505.34 MIPS
+                   Type of CPU model: 3
+                   CPU Number of Points for Interpolation: 11
+                   CPU Utilization Bins: 0 0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9 1 
+                   CPU Power Consuption: 163 170.1251 172.6057 175.4264 179.7886 183.6121 189.9905 196.8095 206.3168 215.9316 220.2148 
+                   CPU Sleep Power Consumption: 163 Watts
+                   Type of Accelerator Model: -1
+                   Accelerator Idle Power Consumption: 32 Watts
+                   Accelerator Max Power Consumption: 250 Watts
+                   Accelerator Sleep Power Consumption: 32 Watts
+              HW Type: 3
+                   Number of Servers: 25000
+                   Number of Proc. Units per Server:20
+                   Memory per Server: 128 GBytes
+                   Storage per Server: 1 TBytes
+                   Proc. Overcommitment ratio: 1
+                   Memory Overcommitment ratio: 1
+                   Compute Capability: 88000.8 MIPS
+                   Accelerators: 1
+                   Total Number of Accelerators per Server: 4
+                   Accelerator Compute Capability: 507494.4 MIPS
+                   Type of CPU model: 3
+                   CPU Number of Points for Interpolation: 11
+                   CPU Utilization Bins: 0 0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9 1 
+                   CPU Power Consuption: 163 170.1251 172.6057 175.4264 179.7886 183.6121 189.9905 196.8095 206.3168 215.9316 220.2148 
+                   CPU Sleep Power Consumption: 163 Watts
+                   Type of Accelerator Model: -1
+                   Accelerator Idle Power Consumption: 176.8 Watts
+                   Accelerator Max Power Consumption: 225 Watts
+                   Accelerator Sleep Power Consumption: 17.3 Watts
+              HW Type: 4
+                   Number of Servers: 25000
+                   Number of Proc. Units per Server:20
+                   Memory per Server: 128 GBytes
+                   Storage per Server: 1 TBytes
+                   Proc. Overcommitment ratio: 1
+                   Memory Overcommitment ratio: 1
+                   Compute Capability: 88000.8 MIPS
+                   Accelerators: 1
+                   Total Number of Accelerators per Server: 4
+                   Accelerator Compute Capability: 295959.3 MIPS
+                   Type of CPU model: 3
+                   CPU Number of Points for Interpolation: 11
+                   CPU Utilization Bins: 0 0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9 1 
+                   CPU Power Consuption: 163 170.1251 172.6057 175.4264 179.7886 183.6121 189.9905 196.8095 206.3168 215.9316 220.2148 
+                   CPU Sleep Power Consumption: 163 Watts
+                   Type of Accelerator Model: 1
+                   Accelerator Idle Power Consumption: 17.3 Watts
+                   Accelerator Max Power Consumption: 25.1 Watts
+                   Accelerator Sleep Power Consumption: 17.3 Watts
+    =========== Broker ===========
+        Poll Interval for the Cell Manager: 20
+
+    Cell: 3
+         Number of HW Types: 4
+         Cell Interconnection Bandwidth: 20 Gbps
+         Network Bandwidth Overcommitment ratio: 1
+              HW Type: 1
+                   Number of Servers: 25000
+                   Number of Proc. Units per Server:20
+                   Memory per Server: 128 GBytes
+                   Storage per Server: 1 TBytes
+                   Proc. Overcommitment ratio: 1
+                   Memory Overcommitment ratio: 1
+                   Compute Capability: 88000.8 MIPS
+                   Accelerators: 0
+                   Total Number of Accelerators per Server: 0
+                   Accelerator Compute Capability: 0 MIPS
+                   Type of CPU model: 3
+                   CPU Number of Points for Interpolation: 11
+                   CPU Utilization Bins: 0 0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9 1 
+                   CPU Power Consuption: 163 170.1251 172.6057 175.4264 179.7886 183.6121 189.9905 196.8095 206.3168 215.9316 220.2148 
+                   CPU Sleep Power Consumption: 163 Watts
+              HW Type: 2
+                   Number of Servers: 25000
+                   Number of Proc. Units per Server:20
+                   Memory per Server: 128 GBytes
+                   Storage per Server: 1 TBytes
+                   Proc. Overcommitment ratio: 1
+                   Memory Overcommitment ratio: 1
+                   Compute Capability: 88000.8 MIPS
+                   Accelerators: 1
+                   Total Number of Accelerators per Server: 4
+                   Accelerator Compute Capability: 587505.34 MIPS
+                   Type of CPU model: 3
+                   CPU Number of Points for Interpolation: 11
+                   CPU Utilization Bins: 0 0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9 1 
+                   CPU Power Consuption: 163 170.1251 172.6057 175.4264 179.7886 183.6121 189.9905 196.8095 206.3168 215.9316 220.2148 
+                   CPU Sleep Power Consumption: 163 Watts
+                   Type of Accelerator Model: -1
+                   Accelerator Idle Power Consumption: 32 Watts
+                   Accelerator Max Power Consumption: 250 Watts
+                   Accelerator Sleep Power Consumption: 32 Watts
+              HW Type: 3
+                   Number of Servers: 25000
+                   Number of Proc. Units per Server:20
+                   Memory per Server: 128 GBytes
+                   Storage per Server: 1 TBytes
+                   Proc. Overcommitment ratio: 1
+                   Memory Overcommitment ratio: 1
+                   Compute Capability: 88000.8 MIPS
+                   Accelerators: 1
+                   Total Number of Accelerators per Server: 4
+                   Accelerator Compute Capability: 507494.4 MIPS
+                   Type of CPU model: 3
+                   CPU Number of Points for Interpolation: 11
+                   CPU Utilization Bins: 0 0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9 1 
+                   CPU Power Consuption: 163 170.1251 172.6057 175.4264 179.7886 183.6121 189.9905 196.8095 206.3168 215.9316 220.2148 
+                   CPU Sleep Power Consumption: 163 Watts
+                   Type of Accelerator Model: -1
+                   Accelerator Idle Power Consumption: 176.8 Watts
+                   Accelerator Max Power Consumption: 225 Watts
+                   Accelerator Sleep Power Consumption: 17.3 Watts
+              HW Type: 4
+                   Number of Servers: 25000
+                   Number of Proc. Units per Server:20
+                   Memory per Server: 128 GBytes
+                   Storage per Server: 1 TBytes
+                   Proc. Overcommitment ratio: 1
+                   Memory Overcommitment ratio: 1
+                   Compute Capability: 88000.8 MIPS
+                   Accelerators: 1
+                   Total Number of Accelerators per Server: 4
+                   Accelerator Compute Capability: 295959.3 MIPS
+                   Type of CPU model: 3
+                   CPU Number of Points for Interpolation: 11
+                   CPU Utilization Bins: 0 0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9 1 
+                   CPU Power Consuption: 163 170.1251 172.6057 175.4264 179.7886 183.6121 189.9905 196.8095 206.3168 215.9316 220.2148 
+                   CPU Sleep Power Consumption: 163 Watts
+                   Type of Accelerator Model: 1
+                   Accelerator Idle Power Consumption: 17.3 Watts
+                   Accelerator Max Power Consumption: 25.1 Watts
+                   Accelerator Sleep Power Consumption: 17.3 Watts
+    =========== Broker ===========
+        Poll Interval for the Cell Manager: 20
+
+---------------------------------------
+
+=========== App Catalog ===========
+Number of Applications: 3
+Minimum and Maximum Jobs Per Second: 0 20 
+-----------------------------------
+     Application: 1
+     Number of Available Implementations: 3
+     Available Implementations: 1 2 3 
+     Minimum - Maximum Instructions Per App: 1.38623e+09 5.54491e+09 
+     Minimum - Maximum VMs Per App: 1 16 
+     Minimum - Maximum vCPUs Per VM: 4 8 
+     Minimum - Maximum Memory Per VM: 4 8 GBytes
+     Minimum - Maximum Storage Per VM: 0.02 0.04 TBytes
+     Minimum - Maximum Network Per VM: 0.0025 0.005 Gbps
+     Type of Actual Utilization (vCPU,Memory,Network): 1 1 1
+     Minimum - Maximum Actual vCPU Utilization: 1 1 
+     Minimum - Maximum Actual Memory Utilization: 1 1 
+     Minimum - Maximum Actual Network Utilization: 1 1 
+     Accelerator support: 0 1 1 
+     Rho for accelerator execution per Implementation: 0 0.7 0.5 
+-----------------------------------
+     Application: 2
+     Number of Available Implementations: 3
+     Available Implementations: 1 2 3 
+     Minimum - Maximum Instructions Per App: 4.62076e+08 2.77246e+09 
+     Minimum - Maximum VMs Per App: 1 8 
+     Minimum - Maximum vCPUs Per VM: 8 16 
+     Minimum - Maximum Memory Per VM: 4 8 GBytes
+     Minimum - Maximum Storage Per VM: 0.01 0.02 TBytes
+     Minimum - Maximum Network Per VM: 0.0005 0.001 Gbps
+     Type of Actual Utilization (vCPU,Memory,Network): 1 1 1
+     Minimum - Maximum Actual vCPU Utilization: 1 1 
+     Minimum - Maximum Actual Memory Utilization: 1 1 
+     Minimum - Maximum Actual Network Utilization: 1 1 
+     Accelerator support: 0 1 1 
+     Rho for accelerator execution per Implementation: 0 0.8 0.9 
+-----------------------------------
+     Application: 3
+     Number of Available Implementations: 2
+     Available Implementations: 1 4 
+     Minimum - Maximum Instructions Per App: 6.93114e+08 4.15869e+09 
+     Minimum - Maximum VMs Per App: 1 4 
+     Minimum - Maximum vCPUs Per VM: 4 8 
+     Minimum - Maximum Memory Per VM: 4 8 GBytes
+     Minimum - Maximum Storage Per VM: 0.04 0.08 TBytes
+     Minimum - Maximum Network Per VM: 0.0025 0.005 Gbps
+     Type of Actual Utilization (vCPU,Memory,Network): 1 1 1
+     Minimum - Maximum Actual vCPU Utilization: 1 1 
+     Minimum - Maximum Actual Memory Utilization: 1 1 
+     Minimum - Maximum Actual Network Utilization: 1 1 
+     Accelerator support: 0 1 
+     Rho for accelerator execution per Implementation: 0 0.9 
+-----------------------------------

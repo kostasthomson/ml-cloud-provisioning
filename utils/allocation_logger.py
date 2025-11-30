@@ -7,7 +7,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import List, Dict, Any
 from config import configuration
-from models import AllocationRequest, AllocationDecision
+from entities import AllocationRequest, AllocationDecision
 
 logger = logging.getLogger(__name__)
 

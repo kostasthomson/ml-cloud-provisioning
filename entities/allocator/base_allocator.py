@@ -3,7 +3,7 @@ from typing import Optional, Tuple, List
 import logging
 
 from config import configuration
-from models import AllocationRequest, AllocationDecision, VMAllocation, CellStatus, HardwareType
+from entities import AllocationRequest, AllocationDecision, VMAllocation, CellStatus, HardwareType
 from services import EnergyCalculator
 from utils import AllocationLogger
 
@@ -20,7 +20,7 @@ class BaseAllocator(ABC):
         """Initialize common components for all allocators."""
         configuration.model_type = self.get_method_name()
         self.energy_calc = EnergyCalculator()
-        self.file_logger = AllocationLogger()
+        self.allocation_logger = AllocationLogger()
         self.allocation_count = 0
         self.rejection_count = 0
 
@@ -78,7 +78,7 @@ class BaseAllocator(ABC):
             )
 
         finally:
-            self.file_logger.log_decision(request, decision)
+            self.allocation_logger.log_decision(request, decision)
 
         return decision
 
@@ -274,12 +274,12 @@ class BaseAllocator(ABC):
         }
 
     def get_logs(self) -> dict:
-        return self.file_logger.get_summary()
+        return self.allocation_logger.get_summary()
 
     def save_logs(self) -> bool:
-        return self.file_logger.save_to_file()
+        return self.allocation_logger.save_to_file()
 
     def reset(self) -> None:
         self.allocation_count = 0
         self.rejection_count = 0
-        self.file_logger.reset()
+        self.allocation_logger.reset()

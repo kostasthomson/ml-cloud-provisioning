@@ -7,3 +7,6 @@ python-json-logger
 numpy
 grpcio
 grpcio-tools
+pandas
+torch
+scikit-learn

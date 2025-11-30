@@ -1,5 +1,5 @@
 """
-Pydantic models for request/response validation.
+Pydantic entities for request/response validation.
 Defines the data structures for communication between C++ simulator and ML service.
 """
 from typing import List, Optional, Dict, Any
