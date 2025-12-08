@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 from typing import Optional, Tuple, List
 import logging
 
-from config import configuration
+from config import fast_api_configuration
 from entities import AllocationRequest, AllocationDecision, VMAllocation, CellStatus, HardwareType
 from services import EnergyCalculator
 from utils import AllocationLogger
@@ -18,7 +18,7 @@ class BaseAllocator(ABC):
 
     def __init__(self):
         """Initialize common components for all allocators."""
-        configuration.model_type = self.get_method_name()
+        fast_api_configuration.model_type = self.get_method_name()
         self.energy_calc = EnergyCalculator()
         self.allocation_logger = AllocationLogger()
         self.allocation_count = 0

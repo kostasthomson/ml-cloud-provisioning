@@ -1,6 +1,6 @@
 from typing import Optional, Tuple, List
 
-from config import configuration
+from config import fast_api_configuration
 from entities import AllocationRequest, VMAllocation, HardwareType, CellStatus
 from entities.allocator import BaseAllocator
 

@@ -10,3 +10,4 @@ grpcio-tools
 pandas
 torch
 scikit-learn
+matplotlib

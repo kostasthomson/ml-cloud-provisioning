@@ -6,7 +6,7 @@ import logging
 from datetime import datetime
 from pathlib import Path
 from typing import List, Dict, Any
-from config import configuration
+from config import fast_api_configuration
 from entities import AllocationRequest, AllocationDecision
 
 logger = logging.getLogger(__name__)
@@ -16,7 +16,7 @@ class AllocationLogger:
     """Logs and persists allocation decisions to JSON file."""
 
     def __init__(self, output_file: str = "allocation_decisions.json"):
-        self.output_file = Path("output", configuration.model_type, output_file)
+        self.output_file = Path("output", fast_api_configuration.model_type, output_file)
         self.decisions: List[Dict[str, Any]] = []
         self.request_count = 0
         self.success_count = 0
@@ -91,7 +91,7 @@ class AllocationLogger:
             output_data = {
                 "metadata": {
                     "generated_at": datetime.now().isoformat(),
-                    "model": configuration.model_type,
+                    "model": fast_api_configuration.model_type,
                     "total_requests": self.request_count,
                     "successful_allocations": self.success_count,
                     "rejected_allocations": self.rejection_count,

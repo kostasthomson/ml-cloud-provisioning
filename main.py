@@ -7,10 +7,10 @@ from fastapi.middleware.cors import CORSMiddleware
 import logging
 from contextlib import asynccontextmanager
 
-from entities import AllocationRequest, AllocationDecision, HealthCheckResponse
-from config import configuration
-from entities.allocator import BaseAllocator, HeuristicAllocator, NNAllocator
-from models.nn.neural_network import NeuralNetwork
+from config import fast_api_configuration
+from entities import BaseAllocator, HeuristicAllocator, NNAllocator, AllocationRequest, AllocationDecision, \
+    HealthCheckResponse
+from models import NeuralNetwork, EnergyAwareNN
 from utils import setup_logging
 
 # Setup logging
@@ -27,13 +27,13 @@ async def lifespan(app: FastAPI):
     global allocator
 
     # Startup
-    logger.info(f"Starting {configuration.app_name} v{configuration.app_version}")
+    logger.info(f"Starting {fast_api_configuration.app_name} v{fast_api_configuration.app_version}")
 
     # Initialize allocator
     allocator = NNAllocator(NeuralNetwork.parent_directory)
     logger.info("Task allocator initialized")
     logger.info("Task allocator and allocation logger initialized")
-    logger.info(f"Model type: {configuration.model_type}")
+    logger.info(f"Model type: {fast_api_configuration.model_type}")
 
     yield
 
@@ -48,17 +48,17 @@ async def lifespan(app: FastAPI):
 
 # Create FastAPI application
 app = FastAPI(
-    title=configuration.app_name,
-    version=configuration.app_version,
+    title=fast_api_configuration.app_name,
+    version=fast_api_configuration.app_version,
     description="Smart task allocation service for cloud simulation using ML/DL techniques",
     lifespan=lifespan
 )
 
 # Configure CORS
-if configuration.enable_cors:
+if fast_api_configuration.enable_cors:
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=configuration.cors_origins,
+        allow_origins=fast_api_configuration.cors_origins,
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
@@ -70,8 +70,8 @@ async def root():
     """Root endpoint - health check."""
     return HealthCheckResponse(
         status="healthy",
-        version=configuration.app_version,
-        model_type=configuration.model_type
+        version=fast_api_configuration.app_version,
+        model_type=fast_api_configuration.model_type
     )
 
 
@@ -80,8 +80,8 @@ async def health_check():
     """Health check endpoint."""
     return HealthCheckResponse(
         status="healthy",
-        version=configuration.app_version,
-        model_type=configuration.model_type
+        version=fast_api_configuration.app_version,
+        model_type=fast_api_configuration.model_type
     )
 
 
@@ -175,7 +175,7 @@ async def save_logs():
         summary = allocator.get_logs()
         return {
             "status": "success",
-            "model": configuration.model_type,
+            "model": fast_api_configuration.model_type,
             "message": "Allocation logs saved successfully",
             "summary": summary
         }
@@ -189,8 +189,8 @@ if __name__ == "__main__":
 
     uvicorn.run(
         "main:app",
-        host=configuration.api_host,
-        port=configuration.api_port,
+        host=fast_api_configuration.api_host,
+        port=fast_api_configuration.api_port,
         reload=True,  # Enable auto-reload during development
-        log_level=configuration.log_level.lower()
+        log_level=fast_api_configuration.log_level.lower()
     )

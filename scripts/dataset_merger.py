@@ -113,9 +113,9 @@ def process_run_pair(csv_file, json_file, broker_name):
 
 
 # ========== MAIN ==========
-training_dir = 'training'
+training_dir = '../training'
 runs = [(f'{d}/decisions.csv', f'{d}/outputCLSim.json', d.split('/')[1]) for d in
-        list(map(lambda x: f'{training_dir}/{x}', ['traditional', 'sosm', 'improved sosm']))]
+        list(map(lambda x: f'{training_dir}/{x}', ['traditional', 'sosm', 'improved']))]
 
 dfs = []
 for csv, json_file, name in runs:

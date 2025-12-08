@@ -5,7 +5,7 @@ from pydantic_settings import BaseSettings
 from typing import Optional
 
 
-class Configuration(BaseSettings):
+class FastApiConfiguration(BaseSettings):
     """Application settings loaded from environment variables."""
 
     # API Settings
@@ -31,4 +31,4 @@ class Configuration(BaseSettings):
         case_sensitive = False
 
 
-configuration = Configuration()
+fast_api_configuration = FastApiConfiguration()
