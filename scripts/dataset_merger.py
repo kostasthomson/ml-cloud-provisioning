@@ -1,8 +1,6 @@
-import os
+import json
 
 import pandas as pd
-import json
-import numpy as np
 
 
 def load_system_state(json_file):

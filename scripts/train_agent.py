@@ -4,7 +4,7 @@ import torch.optim as optim
 from torch.utils.data import DataLoader
 from sklearn.model_selection import train_test_split
 import matplotlib.pyplot as plt
-from training.utils import *
+from scripts.utility_functions import *
 from config import model_configuration as model_config
 from entities import CloudTaskDataset
 from models import EnergyAwareNN

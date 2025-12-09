@@ -147,7 +147,7 @@ def main():
         '--base-path',
         type=str,
         default='../training/data',
-        help='Base directory containing broker outputs (default: ../output)'
+        help='Base directory containing broker outputs (default: ../training/data)'
     )
     parser.add_argument(
         '--output',
