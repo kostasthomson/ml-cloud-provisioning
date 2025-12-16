@@ -1,144 +1,121 @@
-import json
-
 import pandas as pd
+from pathlib import Path
+from typing import List, Optional
+import glob
 
 
-def load_system_state(json_file):
-    """
-    Parses CLSim JSON output into: { timestamp: feature_dict }
-    Each timestamp maps to a dict with descriptive column names.
-    """
-    print(f"  Reading {json_file}...")
-    with open(json_file, 'r') as f:
-        data = json.load(f)
+class CellDatasetMerger:
+    """Merges per-cell decision CSV files from C++ simulator into unified training dataset."""
 
-    state_lookup = {}
-    temp_by_time = {}  # {timestamp: {(cell_id, hw_type_id): features_dict}}
+    def __init__(self, data_dir: str = "../training/simulation_runs"):
+        self.data_dir = Path(data_dir)
 
-    # 1. Parse and group by timestamp and (cell, hw_type)
-    for cell_data in data['CLSim outputs']:
-        cell_id = cell_data['Cell']
-        hw_type_id = cell_data['HW Type']
+    def find_all_csv_files(self) -> List[Path]:
+        """Find all CSV files across all configuration directories."""
+        pattern = self.data_dir / "*" / "cell_*_decisions.csv"
+        files = list(glob.glob(str(pattern)))
+        return [Path(f) for f in sorted(files)]
 
-        for record in cell_data['Outputs']:
-            t = record['Time Step']
+    def merge_config_directory(self, config_dir: Path) -> Optional[pd.DataFrame]:
+        """Merge all CSV files from a single configuration directory."""
+        csv_files = list(config_dir.glob("cell_*_decisions.csv"))
 
-            if t not in temp_by_time:
-                temp_by_time[t] = {}
+        if not csv_files:
+            return None
 
-            # Feature extraction with DESCRIPTIVE NAMES
-            total_cpu = record.get('Total Processors', 1)
-            total_mem = record.get('Total Memory', 1)
+        dfs = []
+        for csv_file in csv_files:
+            df = pd.read_csv(csv_file)
+            if len(df) > 0:
+                dfs.append(df)
 
-            util_cpu = record['Utilized Processors'] / (total_cpu + 1e-9)
-            util_mem = record['Utilized Memory'] / (total_mem + 1e-9)
+        if not dfs:
+            return None
 
-            # Use descriptive keys
-            features = {
-                'util_cpu': util_cpu,
-                'util_mem': util_mem,
-                'avail_cpu': record['Available Processors'],
-                'avail_mem': record['Available Memory'],
-                'avail_storage': record['Available Storage'],
-                'avail_accelerators': record['Available Accelerators']
-            }
+        return pd.concat(dfs, ignore_index=True)
 
-            temp_by_time[t][(cell_id, hw_type_id)] = features
+    def process_all_configs(self, output_path: str = "../training/training_data.csv") -> Optional[pd.DataFrame]:
+        """Process all configuration directories and create unified training dataset."""
+        print("=" * 60)
+        print("MULTI-CONFIG DATASET MERGER (BIAS-FREE)")
+        print("=" * 60)
 
-    # 2. Flatten into DataFrame with descriptive column names
-    for t, hw_dict in temp_by_time.items():
-        sorted_keys = sorted(hw_dict.keys())  # (cell, hw_type) sorted
+        if not self.data_dir.exists():
+            print(f"ERROR: Data directory not found: {self.data_dir}")
+            return None
 
-        # Build row with descriptive column names
-        row_dict = {}
-        for (cell_id, hw_type_id) in sorted_keys:
-            features = hw_dict[(cell_id, hw_type_id)]
+        config_dirs = [d for d in self.data_dir.iterdir() if d.is_dir()]
 
-            # Create columns like: cell1_hw2_util_cpu, cell1_hw2_avail_mem, etc.
-            for feat_name, feat_val in features.items():
-                col_name = f"cell{cell_id}_hw{hw_type_id}_{feat_name}"
-                row_dict[col_name] = feat_val
+        if not config_dirs:
+            print(f"ERROR: No configuration directories found in {self.data_dir}")
+            return None
 
-        state_lookup[t] = row_dict
+        print(f"Found {len(config_dirs)} configuration directories")
 
-    return state_lookup
+        all_data = []
+        for config_dir in sorted(config_dirs):
+            config_name = config_dir.name
+            df = self.merge_config_directory(config_dir)
 
+            if df is not None and len(df) > 0:
+                print(f"  {config_name}: {len(df)} records")
+                all_data.append(df)
+            else:
+                print(f"  {config_name}: No data")
 
-def process_run_pair(csv_file, json_file, broker_name):
-    """
-    Merges Decisions (CSV) with System State (JSON).
-    """
-    print(f"Processing {broker_name}...")
+        if not all_data:
+            print("ERROR: No data found!")
+            return None
 
-    # 1. Load decision log
-    df = pd.read_csv(csv_file)
+        df_unified = pd.concat(all_data, ignore_index=True)
+        df_unified = df_unified.sample(frac=1, random_state=42).reset_index(drop=True)
 
-    # 2. Load system state context
-    state_lookup = load_system_state(json_file)
+        df_accepted = df_unified[df_unified['accepted'] == 1].copy()
 
-    # 3. Join on timestamp
-    def get_state_dict(ts):
-        # Handle float precision
-        ts_rounded = round(ts, 2)
-        if ts_rounded in state_lookup:
-            return state_lookup[ts_rounded]
-        elif ts in state_lookup:
-            return state_lookup[ts]
-        else:
-            # Return empty dict if not found
-            return {}
+        print(f"\n{'=' * 60}")
+        print("DATASET STATISTICS")
+        print("=" * 60)
+        print(f"Total records: {len(df_unified)}")
+        print(f"Accepted: {len(df_accepted)} ({100*len(df_accepted)/len(df_unified):.1f}%)")
 
-    # Convert list of dicts to DataFrame
-    state_dicts = df['timestamp'].apply(get_state_dict).tolist()
-    state_df = pd.DataFrame(state_dicts)
+        if len(df_accepted) > 0:
+            print(f"\nHW Type Distribution (accepted):")
+            for hw_type in sorted(df_accepted['chosen_hw_type'].unique()):
+                if hw_type > 0:
+                    count = len(df_accepted[df_accepted['chosen_hw_type'] == hw_type])
+                    print(f"  HW Type {hw_type}: {count} ({100*count/len(df_accepted):.1f}%)")
 
-    # Fill missing values with 0 (in case of timestamp mismatch)
-    state_df = state_df.fillna(0)
+        output_path = Path(output_path)
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        df_unified.to_csv(output_path, index=False)
 
-    # 4. Combine
-    merged_df = pd.concat([df.reset_index(drop=True), state_df], axis=1)
+        print(f"\nSaved to: {output_path}")
+        print(f"Columns (bias-free): {list(df_unified.columns)}")
 
-    # 5. DROP TIMESTAMP
-    merged_df = merged_df.drop(columns=['timestamp'])
-
-    # Sanity check
-    if state_df.shape[1] == 0:
-        print(f"  ⚠️  WARNING: No system state features extracted for {broker_name}!")
-    else:
-        print(f"  ✓ Extracted {state_df.shape[1]} state features")
-
-    return merged_df
+        return df_unified
 
 
-# ========== MAIN ==========
-training_dir = '../training'
-runs = [(f'{d}/decisions.csv', f'{d}/outputCLSim.json', d.split('/')[1]) for d in
-        list(map(lambda x: f'{training_dir}/{x}', ['traditional', 'sosm', 'improved']))]
+def main():
+    import argparse
 
-dfs = []
-for csv, json_file, name in runs:
-    try:
-        d = process_run_pair(csv, json_file, name)
-        dfs.append(d)
-        print(f"  ✓ {name}: {d.shape[0]} rows")
-    except FileNotFoundError as e:
-        print(f"  ✗ Skipping {name}: {e}")
-    except Exception as e:
-        print(f"  ✗ Error processing {name}: {e}")
+    parser = argparse.ArgumentParser(description='Merge CSV files from multiple simulation runs')
+    parser.add_argument('--data-dir', type=str,
+                        default='../training/simulation_runs',
+                        help='Directory containing simulation run subdirectories')
+    parser.add_argument('--output', type=str,
+                        default='../training/training_data.csv',
+                        help='Output path for merged dataset')
 
-if dfs:
-    final_dataset = pd.concat(dfs, ignore_index=True)
+    args = parser.parse_args()
 
-    print("-" * 50)
-    print(f"Total Dataset Size: {final_dataset.shape}")
+    merger = CellDatasetMerger(args.data_dir)
+    df = merger.process_all_configs(output_path=args.output)
 
-    # Show sample of column names
-    state_cols = [c for c in final_dataset.columns if c.startswith('cell')]
-    print(f"\nExample state columns (first 10):")
-    for col in state_cols[:10]:
-        print(f"  - {col}")
+    if df is not None:
+        print(f"\nReady for training: python train_agent.py")
 
-    final_dataset.to_csv("training/training_data_v1.csv", index=False)
-    print("\n✓ Saved to training_data_v1.csv")
-else:
-    print("No data processed.")
+    return args.output
+
+
+if __name__ == "__main__":
+    main()

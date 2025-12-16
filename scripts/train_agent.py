@@ -1,3 +1,7 @@
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).parent.parent))
+
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -11,7 +15,7 @@ from models import EnergyAwareNN
 from torch.utils.data import WeightedRandomSampler
 
 
-def main(training_data_path: str = ""):
+def main(training_data_path: str = "training/training_data.csv"):
     """Main training function"""
 
     print("=" * 60)
@@ -138,4 +142,8 @@ def main(training_data_path: str = ""):
 
 
 if __name__ == "__main__":
-    main()
+    import argparse
+    parser = argparse.ArgumentParser(description='Train energy-aware allocation model')
+    parser.add_argument('data_path', nargs='?', default='../training/training_data.csv', help='Path to training data CSV')
+    args = parser.parse_args()
+    main(args.data_path)

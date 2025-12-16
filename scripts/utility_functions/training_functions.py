@@ -96,10 +96,10 @@ def analyze_feature_importance(model, X_test, y_test, feature_names, device):
         perfect_predictor = all(v != -1 for v in unique_combos.values())
 
         if perfect_predictor and len(unique_combos) <= 10:
-            print(f"⚠️  {feature_name} might be a PERFECT PREDICTOR!")
-            print(f"   Unique values → HW types mapping:")
+            print(f"WARNING: {feature_name} might be a PERFECT PREDICTOR!")
+            print(f"   Unique values -> HW types mapping:")
             for val, hw_type in sorted(unique_combos.items())[:10]:
-                print(f"     {val:.4f} → HW Type {hw_type + 1}")
+                print(f"     {val:.4f} -> HW Type {hw_type + 1}")
 
     print("=" * 80)
 
@@ -137,10 +137,14 @@ def analyze_predictions(model, test_loader, device):
 
     # Classification report
     print("\nClassification Report:")
+    present_labels = sorted(set(all_labels) | set(all_predictions))
+    target_names = [f'HW Type {i+1}' for i in present_labels]
     print(classification_report(
         all_labels,
         all_predictions,
-        target_names=['HW Type 1', 'HW Type 2', 'HW Type 3', 'HW Type 4']
+        labels=present_labels,
+        target_names=target_names,
+        zero_division=0
     ))
 
     # Check if model always predicts same class
@@ -148,6 +152,6 @@ def analyze_predictions(model, test_loader, device):
     print(f"\nUnique predictions: {unique_predictions + 1}")  # +1 for 1-indexed
 
     if len(unique_predictions) == 1:
-        print(f"⚠️  WARNING: Model only predicts HW Type {unique_predictions[0] + 1}!")
+        print(f"WARNING: Model only predicts HW Type {unique_predictions[0] + 1}!")
 
     print("=" * 80 + "\n")
