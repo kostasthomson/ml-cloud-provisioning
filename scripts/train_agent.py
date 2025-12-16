@@ -4,7 +4,7 @@ import torch.optim as optim
 from torch.utils.data import DataLoader
 from sklearn.model_selection import train_test_split
 import matplotlib.pyplot as plt
-from scripts.utility_functions import *
+from utility_functions import *
 from config import model_configuration as model_config
 from entities import CloudTaskDataset
 from models import EnergyAwareNN
@@ -21,17 +21,6 @@ def main(training_data_path: str = ""):
     # Load and preprocess data
     X, y, df = load_and_preprocess_data(training_data_path if training_data_path != "" else model_config.DATA_PATH)
 
-    # Compute sample weights (prefer low-energy decisions)
-    df['sample_weight'] = 1.0 / (df['energy_kwh'] + 1e-6)
-    df['sample_weight'] /= df['sample_weight'].sum()
-
-    # Create weighted sampler
-    sampler = WeightedRandomSampler(
-        weights=df['sample_weight'].values,
-        num_samples=len(df),
-        replacement=True
-    )
-
     # Split data
     X_train, X_temp, y_train, y_temp = train_test_split(
         X, y, test_size=0.3, random_state=42, stratify=y
@@ -40,7 +29,7 @@ def main(training_data_path: str = ""):
         X_temp, y_temp, test_size=0.5, random_state=42, stratify=y_temp
     )
 
-    print(f"\\nDataset splits:")
+    print(f"Dataset splits:")
     print(f"  Training:   {len(X_train)} samples")
     print(f"  Validation: {len(X_val)} samples")
     print(f"  Test:       {len(X_test)} samples")
@@ -53,7 +42,7 @@ def main(training_data_path: str = ""):
     val_dataset = CloudTaskDataset(X_val, y_val)
     test_dataset = CloudTaskDataset(X_test, y_test)
 
-    train_loader = DataLoader(train_dataset, sampler=sampler, batch_size=model_config.BATCH_SIZE, shuffle=True)
+    train_loader = DataLoader(train_dataset, batch_size=model_config.BATCH_SIZE, shuffle=True)
     val_loader = DataLoader(val_dataset, batch_size=model_config.BATCH_SIZE)
     test_loader = DataLoader(test_dataset, batch_size=model_config.BATCH_SIZE)
 
@@ -67,9 +56,9 @@ def main(training_data_path: str = ""):
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.Adam(model.parameters(), lr=model_config.LEARNING_RATE)
 
-    print(f"\\nModel architecture:")
+    print(f"Model architecture:")
     print(model)
-    print(f"\\nTraining on: {model_config.DEVICE}")
+    print(f"Training on: {model_config.DEVICE}")
 
     # Training loop
     train_losses = []
@@ -79,7 +68,7 @@ def main(training_data_path: str = ""):
 
     best_val_acc = 0.0
 
-    print(f"\\nStarting training for {model_config.NUM_EPOCHS} epochs...")
+    print(f"Starting training for {model_config.NUM_EPOCHS} epochs...")
     print("-" * 60)
 
     for epoch in range(model_config.NUM_EPOCHS):
@@ -100,7 +89,7 @@ def main(training_data_path: str = ""):
                 'optimizer_state_dict': optimizer.state_dict(),
                 'scaler': scaler,
                 'val_acc': val_acc
-            }, 'best_energy_aware_model.pth')
+            }, f"{model.directory}/model.pth")
 
         if (epoch + 1) % 10 == 0:
             print(f"Epoch [{epoch + 1}/{model_config.NUM_EPOCHS}] "
@@ -109,7 +98,17 @@ def main(training_data_path: str = ""):
 
     # Test evaluation
     test_loss, test_acc = validate(model, test_loader, criterion, model_config.DEVICE)
-    print(f"\\nTest Accuracy: {test_acc:.2f}%")
+    print(f"Test Accuracy: {test_acc:.2f}%")
+
+    # Feature importance analysis
+    feature_names = [
+        'num_vms', 'cpu_req', 'mem_req', 'total_cpu_req',
+        'util_cpu_before', 'util_mem_before', 'avail_cpu_before',
+        'avail_mem_before', 'avail_storage_before', 'avail_accelerators_before'
+    ]
+    analyze_feature_importance(model, X_test, y_test, feature_names, model_config.DEVICE)
+
+    analyze_predictions(model, test_loader, model_config.DEVICE)
 
     # Plot training curves
     plt.figure(figsize=(12, 4))
@@ -131,11 +130,11 @@ def main(training_data_path: str = ""):
     plt.title('Training and Validation Accuracy')
 
     plt.tight_layout()
-    plt.savefig('training_curves.png')
-    print(f"\\nTraining curves saved to training_curves.png")
+    plt.savefig(f"{model.directory}/training_curves.png")
+    print(f"Training curves saved to {model.directory}/training_curves.png")
 
-    print(f"\\nBest validation accuracy: {best_val_acc:.2f}%")
-    print("Model saved to best_energy_aware_model.pth")
+    print(f"Best validation accuracy: {best_val_acc:.2f}%")
+    print(f"Model saved to {model.directory}/model.pth")
 
 
 if __name__ == "__main__":

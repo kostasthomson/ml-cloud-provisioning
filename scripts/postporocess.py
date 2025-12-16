@@ -27,8 +27,8 @@ class UnifiedEnergyPostProcessor:
         u = np.clip(max(cpu_util, mem_util), 0.0, 1.0)
         P_min = self.power_models[hw_type]['P_min']
         P_max = self.power_models[hw_type]['P_max']
-
         power_W = P_min + (P_max - P_min) * u
+
         duration_sec = 10.0  # Placeholder
         energy_kWh = (power_W * duration_sec) / (1000.0 * 3600.0)
 
@@ -38,8 +38,7 @@ class UnifiedEnergyPostProcessor:
         """Process decisions from a single broker"""
         input_path = Path(base_path) / broker_name / 'decisions.csv'
 
-        print(f"\\nProcessing {broker_name}...")
-
+        print(f"Processing {broker_name}...")
         if not input_path.exists():
             print(f"  WARNING: {input_path} not found, skipping")
             return None
@@ -49,18 +48,17 @@ class UnifiedEnergyPostProcessor:
 
         # Filter accepted tasks
         df_accepted = df[df['accepted'] == 1].copy()
+        df_accepted = df_accepted.drop(
+            columns=['timestamp', 'task_id', 'processing_time_sec', 'chosen_cell'],
+            errors='ignore')
 
         if len(df_accepted) == 0:
             print(f"  WARNING: No accepted tasks, skipping")
             return None
 
-        # Add broker label (for analysis, not training)
-        df_accepted['source_broker'] = broker_name
-
-        # Compute energy
+        # Compute energy (post-decision metric)
         results = df_accepted.apply(self.compute_energy, axis=1)
         df_accepted['energy_kwh'] = results.apply(lambda x: x[0])
-        df_accepted['processing_time_sec'] = results.apply(lambda x: x[1])
 
         print(f"  ✓ Processed {len(df_accepted)} tasks")
         print(f"    Total energy: {df_accepted['energy_kwh'].sum():.4f} kWh")
@@ -90,35 +88,28 @@ class UnifiedEnergyPostProcessor:
         print("=" * 80)
 
         all_data = []
-
         for broker in brokers:
             df_broker = self.process_broker(broker, base_path)
             if df_broker is not None:
                 all_data.append(df_broker)
 
         if not all_data:
-            print("\\nERROR: No data processed from any broker!")
+            print("ERROR: No data processed from any broker!")
             return None
 
         # Combine all broker data
-        print(f"\\n{'=' * 80}")
+        print(f"\n{'=' * 80}")
         print("COMBINING DATASETS")
         print("=" * 80)
 
         df_unified = pd.concat(all_data, ignore_index=True)
 
-        print(f"\\nUnified Dataset Statistics:")
+        print(f"\nUnified Dataset Statistics:")
         print(f"  Total tasks: {len(df_unified)}")
         print(f"  Total energy: {df_unified['energy_kwh'].sum():.4f} kWh")
         print(f"  Mean energy per task: {df_unified['energy_kwh'].mean():.6f} kWh")
 
-        print(f"\\nData Distribution by Broker:")
-        for broker in brokers:
-            count = len(df_unified[df_unified['source_broker'] == broker])
-            pct = 100 * count / len(df_unified)
-            print(f"  {broker:15s}: {count:6d} ({pct:5.1f}%)")
-
-        print(f"\\nData Distribution by HW Type:")
+        print(f"\nData Distribution by HW Type:")
         for hw_type in sorted(df_unified['chosen_hw_type'].unique()):
             count = len(df_unified[df_unified['chosen_hw_type'] == hw_type])
             pct = 100 * count / len(df_unified)
@@ -130,7 +121,8 @@ class UnifiedEnergyPostProcessor:
         output_path.parent.mkdir(parents=True, exist_ok=True)
         df_unified.to_csv(output_path, index=False)
 
-        print(f"\\n✓ Unified dataset saved to: {output_path}")
+        print(f"\n✓ Unified dataset saved to: {output_path}")
+        print(f"  Columns in CSV: {list(df_unified.columns)}")
         print(f"  Ready for ML training!")
 
         return df_unified
@@ -172,7 +164,7 @@ def main():
     )
 
     if df_unified is not None:
-        print(f"\\n{'=' * 80}")
+        print(f"\n{'=' * 80}")
         print("READY FOR TRAINING")
         print("=" * 80)
         print(f"Use: python train_agent.py --data {args.output}")

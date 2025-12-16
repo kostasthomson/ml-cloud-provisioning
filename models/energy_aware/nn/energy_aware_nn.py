@@ -5,7 +5,7 @@ import torch.nn as nn
 
 class EnergyAwareNN(nn.Module):
     """Neural network for energy-aware HW type prediction"""
-    parent_directory: str = '/'.join(str(Path(__file__).parent).split('\\')[-2:])
+    parent_directory: str = '/'.join(str(Path(__file__).parent).split('\\'))
 
     def __init__(self, input_size, hidden_size, num_classes):
         super(EnergyAwareNN, self).__init__()
