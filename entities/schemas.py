@@ -131,3 +131,80 @@ class HealthCheckResponse(BaseModel):
     status: str
     version: str
     model_type: str
+
+
+class ImplementationOption(BaseModel):
+    """A single implementation option for an application."""
+    impl_id: int = Field(..., description="Implementation ID")
+    impl_name: str = Field(..., description="Implementation name (e.g., CPU-only, GPU-accelerated)")
+    num_vms: int = Field(..., description="Number of VMs required")
+    vcpus_per_vm: int = Field(..., description="vCPUs per VM")
+    memory_per_vm: float = Field(..., description="Memory per VM (GB)")
+    storage_per_vm: float = Field(default=0.1, description="Storage per VM (TB)")
+    network_per_vm: float = Field(default=0.01, description="Network bandwidth per VM")
+    requires_accelerator: bool = Field(default=False, description="Whether accelerator is required")
+    accelerator_utilization: float = Field(default=0.0, description="Accelerator utilization ratio (rho)")
+    estimated_instructions: float = Field(default=1e9, description="Estimated instructions to execute")
+
+
+class MultiImplAllocationRequest(BaseModel):
+    """Request for multi-implementation allocation decision."""
+    timestamp: float = Field(..., description="Current simulation timestamp")
+    cells: List[CellStatus] = Field(..., description="Status of all cells")
+    application_id: int = Field(..., description="Application ID")
+    task_id: str = Field(..., description="Unique task identifier")
+    implementations: List[ImplementationOption] = Field(..., description="Available implementations")
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "timestamp": 100.0,
+                "cells": [],
+                "application_id": 1,
+                "task_id": "task_001",
+                "implementations": [
+                    {
+                        "impl_id": 1,
+                        "impl_name": "CPU-only",
+                        "num_vms": 16,
+                        "vcpus_per_vm": 8,
+                        "memory_per_vm": 32.0,
+                        "requires_accelerator": False
+                    },
+                    {
+                        "impl_id": 2,
+                        "impl_name": "GPU-accelerated",
+                        "num_vms": 4,
+                        "vcpus_per_vm": 4,
+                        "memory_per_vm": 16.0,
+                        "requires_accelerator": True,
+                        "accelerator_utilization": 0.9
+                    }
+                ]
+            }
+        }
+
+
+class EnergyPrediction(BaseModel):
+    """Energy prediction for a single (implementation, hardware) combination."""
+    impl_id: int = Field(..., description="Implementation ID")
+    impl_name: str = Field(..., description="Implementation name")
+    cell_id: int = Field(..., description="Cell ID")
+    hw_type_id: int = Field(..., description="Hardware type ID")
+    hw_name: str = Field(..., description="Hardware type name")
+    predicted_energy_wh: float = Field(..., description="Predicted energy in Wh")
+
+
+class MultiImplAllocationDecision(BaseModel):
+    """Response for multi-implementation allocation decision."""
+    success: bool = Field(..., description="Whether allocation is possible")
+    selected_impl_id: Optional[int] = Field(None, description="Selected implementation ID")
+    selected_impl_name: Optional[str] = Field(None, description="Selected implementation name")
+    num_vms_allocated: int = Field(default=0, description="Number of VMs allocated")
+    vm_allocations: List[VMAllocation] = Field(default_factory=list, description="VM allocation details")
+    estimated_energy_wh: Optional[float] = Field(None, description="Estimated energy (Wh)")
+    all_predictions: List[EnergyPrediction] = Field(default_factory=list, description="All predictions")
+    skipped_combinations: List[str] = Field(default_factory=list, description="Skipped combinations")
+    reason: Optional[str] = Field(None, description="Explanation of decision")
+    allocation_method: str = Field(..., description="Method used for allocation")
+    timestamp: float = Field(..., description="Decision timestamp")

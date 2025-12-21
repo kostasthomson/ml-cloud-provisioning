@@ -1,0 +1,182 @@
+C:\projects\demo\ml-cloud-provisioning\.venv\Scripts\python.exe C:\projects\demo\ml-cloud-provisioning\scripts\train_pipeline.py
+============================================================
+MULTI-CONFIG DATASET MERGER (BIAS-FREE)
+============================================================
+Found 57 configuration directories
+  abundant_resources_improved_sosm: 4000 records
+  abundant_resources_sosm: 4000 records
+  abundant_resources_traditional: 4000 records
+  balanced_medium_improved_sosm: 13000 records
+  balanced_medium_sosm: 13000 records
+  balanced_medium_traditional: 13000 records
+  baseline_improved_sosm: 13000 records
+  baseline_sosm: 10362 records
+  baseline_traditional: 9928 records
+  baseline_v2_improved_sosm: 13000 records
+  baseline_v2_sosm: 13000 records
+  baseline_v2_traditional: 13000 records
+  cpu_dominant_improved_sosm: 18493 records
+  cpu_dominant_sosm: 18478 records
+  cpu_dominant_traditional: 17554 records
+  cpu_only_improved_sosm: 13813 records
+  cpu_only_sosm: 20722 records
+  cpu_only_traditional: 12511 records
+  dfe_preferred_improved_sosm: 6130 records
+  dfe_preferred_sosm: 6130 records
+  dfe_preferred_traditional: 2870 records
+  edge_computing_improved_sosm: 9590 records
+  edge_computing_sosm: 10800 records
+  edge_computing_traditional: 8221 records
+  gpu_heavy_improved_sosm: 1922 records
+  gpu_heavy_sosm: 1922 records
+  gpu_heavy_traditional: 1818 records
+  high_load_improved_sosm: 36262 records
+  high_load_sosm: 28118 records
+  high_load_traditional: 19976 records
+  hpc_cluster_improved_sosm: 7000 records
+  hpc_cluster_sosm: 7000 records
+  hpc_cluster_traditional: 6862 records
+  large_enterprise_improved_sosm: 52248 records
+  large_enterprise_sosm: 49160 records
+  large_enterprise_traditional: 40928 records
+  low_load_improved_sosm: 4800 records
+  low_load_sosm: 4800 records
+  low_load_traditional: 4800 records
+  memory_intensive_improved_sosm: 3616 records
+  memory_intensive_sosm: 3614 records
+  memory_intensive_traditional: 3572 records
+  mic_preferred_improved_sosm: 5691 records
+  mic_preferred_sosm: 5727 records
+  mic_preferred_traditional: 1402 records
+  mixed_accel_improved_sosm: 2198 records
+  mixed_accel_sosm: 2198 records
+  mixed_accel_traditional: 2218 records
+  mixed_all_hw_improved_sosm: 21600 records
+  mixed_all_hw_sosm: 21600 records
+  mixed_all_hw_traditional: 21040 records
+  scarce_resources_improved_sosm: 917 records
+  scarce_resources_sosm: 1202 records
+  scarce_resources_traditional: 1067 records
+  small_efficient_improved_sosm: 5600 records
+  small_efficient_sosm: 5600 records
+  small_efficient_traditional: 5600 records
+
+============================================================
+DATASET STATISTICS
+============================================================
+Total records: 650680
+Accepted: 563723 (86.6%)
+
+HW Type Distribution (accepted):
+  HW Type 1: 200889 (35.6%)
+  HW Type 2: 163975 (29.1%)
+  HW Type 3: 57243 (10.2%)
+  HW Type 4: 141616 (25.1%)
+
+Saved to: ..\training\training_data.csv
+Columns (bias-free): ['num_vms', 'cpu_req', 'mem_req', 'storage_req', 'network_req', 'acc_req', 'rho_acc', 'requested_instructions', 'util_cpu_before', 'util_mem_before', 'avail_cpu_before', 'avail_mem_before', 'avail_storage_before', 'avail_accelerators_before', 'total_cpu', 'total_mem', 'total_storage', 'total_accelerators', 'avail_network', 'total_network', 'util_network', 'cpu_idle_power', 'cpu_max_power', 'acc_idle_power', 'acc_max_power', 'compute_cap_per_cpu', 'compute_cap_acc', 'running_vms', 'overcommit_cpu', 'overcommit_mem', 'num_tasks', 'energy_kwh', 'chosen_hw_type', 'accepted']
+============================================================
+ENERGY-AWARE CLOUD RESOURCE ALLOCATION TRAINING
+============================================================
+Loading data from ../training/training_data.csv...
+Loaded 650680 records
+WARNING: Found 5 NaN values in data
+  Dropped 5 incomplete rows, 650675 remaining
+Accepted tasks with valid HW: 563718
+Features (15): ['num_vms', 'cpu_req', 'mem_req', 'storage_req', 'network_req', 'requested_instructions', 'total_cpu_req', 'total_mem_req', 'total_storage_req', 'instructions_per_cpu', 'cpu_mem_ratio', 'running_vms', 'num_tasks', 'overcommit_cpu', 'overcommit_mem']
+Feature matrix shape: (563718, 15)
+Label distribution:
+  HW Type 1: 200889 (35.6%)
+  HW Type 2: 163975 (29.1%)
+  HW Type 3: 57238 (10.2%)
+  HW Type 4: 141616 (25.1%)
+Detected 15 input features
+Dataset splits:
+  Training:   394602 samples
+  Validation: 84558 samples
+  Test:       84558 samples
+  CloudTaskDataset created: 394602 samples, 15 features
+  CloudTaskDataset created: 84558 samples, 15 features
+  CloudTaskDataset created: 84558 samples, 15 features
+Model architecture:
+EnergyAwareNN(
+  (network): Sequential(
+    (0): Linear(in_features=15, out_features=128, bias=True)
+    (1): ReLU()
+    (2): Dropout(p=0.3, inplace=False)
+    (3): Linear(in_features=128, out_features=128, bias=True)
+    (4): ReLU()
+    (5): Dropout(p=0.3, inplace=False)
+    (6): Linear(in_features=128, out_features=64, bias=True)
+    (7): ReLU()
+    (8): Dropout(p=0.2, inplace=False)
+    (9): Linear(in_features=64, out_features=4, bias=True)
+  )
+)
+Training on: cpu
+Starting training for 100 epochs...
+------------------------------------------------------------
+Epoch [10/100] Train Loss: 0.1470, Train Acc: 93.08% | Val Loss: 0.1276, Val Acc: 93.62%
+Epoch [20/100] Train Loss: 0.1394, Train Acc: 93.41% | Val Loss: 0.1212, Val Acc: 93.98%
+Epoch [30/100] Train Loss: 0.1352, Train Acc: 93.58% | Val Loss: 0.1166, Val Acc: 94.14%
+Epoch [40/100] Train Loss: 0.1342, Train Acc: 93.64% | Val Loss: 0.1186, Val Acc: 94.03%
+Epoch [50/100] Train Loss: 0.1315, Train Acc: 93.70% | Val Loss: 0.1160, Val Acc: 94.17%
+Epoch [60/100] Train Loss: 0.1299, Train Acc: 93.76% | Val Loss: 0.1166, Val Acc: 94.13%
+Epoch [70/100] Train Loss: 0.1298, Train Acc: 93.77% | Val Loss: 0.1191, Val Acc: 94.01%
+Epoch [80/100] Train Loss: 0.1289, Train Acc: 93.81% | Val Loss: 0.1169, Val Acc: 94.05%
+Epoch [90/100] Train Loss: 0.1287, Train Acc: 93.84% | Val Loss: 0.1174, Val Acc: 94.04%
+Epoch [100/100] Train Loss: 0.1277, Train Acc: 93.85% | Val Loss: 0.1160, Val Acc: 94.17%
+Test Accuracy: 94.19%
+
+================================================================================
+FEATURE IMPORTANCE ANALYSIS
+================================================================================
+0 num_vms
+1 cpu_req
+2 mem_req
+3 storage_req
+4 network_req
+5 acc_req
+6 rho_acc
+7 requested_instructions
+8 total_cpu_req
+9 total_mem_req
+10 total_storage_req
+11 instructions_per_cpu
+12 acc_efficiency
+13 cpu_mem_ratio
+14 running_vms
+================================================================================
+
+================================================================================
+PREDICTION ANALYSIS
+================================================================================
+
+Confusion Matrix:
+(Rows: True labels, Columns: Predicted labels)
+
+       Type1  Type2  Type3  Type4
+Type1: [29164   148    25   796]
+Type2: [   11 24575    11     0]
+Type3: [ 221 3587 4684   94]
+Type4: [    0     0    24 21218]
+
+Classification Report:
+              precision    recall  f1-score   support
+
+   HW Type 1       0.99      0.97      0.98     30133
+   HW Type 2       0.87      1.00      0.93     24597
+   HW Type 3       0.99      0.55      0.70      8586
+   HW Type 4       0.96      1.00      0.98     21242
+
+    accuracy                           0.94     84558
+   macro avg       0.95      0.88      0.90     84558
+weighted avg       0.95      0.94      0.94     84558
+
+
+Unique predictions: [1 2 3 4]
+================================================================================
+
+Training curves saved to C:/projects/demo/ml-cloud-provisioning/models/energy_aware/nn/training_curves.png
+Best validation accuracy: 94.22%
+Model saved to C:/projects/demo/ml-cloud-provisioning/models/energy_aware/nn/model.pth

@@ -1,11 +1,113 @@
 import numpy as np
 import torch
-from sklearn.metrics import confusion_matrix, classification_report
+
+
+def train_epoch_regression(model, dataloader, criterion, optimizer, device):
+    model.train()
+    total_loss = 0.0
+    total_samples = 0
+
+    for features, targets in dataloader:
+        features = features.to(device)
+        targets = targets.to(device).float().unsqueeze(1)
+
+        outputs = model(features)
+        loss = criterion(outputs, targets)
+
+        optimizer.zero_grad()
+        loss.backward()
+        optimizer.step()
+
+        total_loss += loss.item() * features.size(0)
+        total_samples += features.size(0)
+
+    avg_loss = total_loss / total_samples
+    rmse = np.sqrt(avg_loss)
+    return avg_loss, rmse
+
+
+def validate_regression(model, dataloader, criterion, device):
+    model.eval()
+    total_loss = 0.0
+    total_samples = 0
+    all_preds = []
+    all_targets = []
+
+    with torch.no_grad():
+        for features, targets in dataloader:
+            features = features.to(device)
+            targets = targets.to(device).float().unsqueeze(1)
+
+            outputs = model(features)
+            loss = criterion(outputs, targets)
+
+            total_loss += loss.item() * features.size(0)
+            total_samples += features.size(0)
+
+            all_preds.extend(outputs.cpu().numpy().flatten())
+            all_targets.extend(targets.cpu().numpy().flatten())
+
+    avg_loss = total_loss / total_samples
+    rmse = np.sqrt(avg_loss)
+
+    all_preds = np.array(all_preds)
+    all_targets = np.array(all_targets)
+    mae = np.mean(np.abs(all_preds - all_targets))
+    mape = np.mean(np.abs((all_targets - all_preds) / (all_targets + 1e-8))) * 100
+
+    return avg_loss, rmse, mae, mape
+
+
+def analyze_regression_predictions(model, test_loader, device, df_test=None):
+    model.eval()
+    all_preds = []
+    all_targets = []
+
+    with torch.no_grad():
+        for features, targets in test_loader:
+            features = features.to(device)
+            outputs = model(features)
+            all_preds.extend(outputs.cpu().numpy().flatten())
+            all_targets.extend(targets.numpy())
+
+    all_preds = np.array(all_preds)
+    all_targets = np.array(all_targets)
+
+    print("\nREGRESSION ANALYSIS")
+    print("=" * 60)
+
+    rmse = np.sqrt(np.mean((all_preds - all_targets) ** 2))
+    mae = np.mean(np.abs(all_preds - all_targets))
+    mape = np.mean(np.abs((all_targets - all_preds) / (all_targets + 1e-8))) * 100
+
+    ss_res = np.sum((all_targets - all_preds) ** 2)
+    ss_tot = np.sum((all_targets - np.mean(all_targets)) ** 2)
+    r2 = 1 - (ss_res / (ss_tot + 1e-8))
+
+    print(f"RMSE: {rmse:.6f} kWh")
+    print(f"MAE: {mae:.6f} kWh")
+    print(f"MAPE: {mape:.2f}%")
+    print(f"R2 Score: {r2:.4f}")
+
+    print(f"\nTarget range: {all_targets.min():.6f} to {all_targets.max():.6f}")
+    print(f"Prediction range: {all_preds.min():.6f} to {all_preds.max():.6f}")
+
+    if df_test is not None and 'chosen_hw_type' in df_test.columns:
+        hw_types = df_test['chosen_hw_type'].values[:len(all_preds)]
+        print("\nPer HW Type Performance:")
+        for t in range(1, 5):
+            mask = hw_types == t
+            if mask.sum() > 0:
+                t_rmse = np.sqrt(np.mean((all_preds[mask] - all_targets[mask]) ** 2))
+                t_mae = np.mean(np.abs(all_preds[mask] - all_targets[mask]))
+                print(f"  Type {t}: RMSE={t_rmse:.6f}, MAE={t_mae:.6f}, n={mask.sum()}")
+
+    print("=" * 60)
+
+    return rmse, mae, r2
 
 
 def train_epoch(model, dataloader, criterion, optimizer, device):
-    """Train for one epoch"""
-
     model.train()
     total_loss = 0.0
     correct = 0
@@ -13,17 +115,13 @@ def train_epoch(model, dataloader, criterion, optimizer, device):
 
     for features, labels in dataloader:
         features, labels = features.to(device), labels.to(device)
-
-        # Forward pass
         outputs = model(features)
         loss = criterion(outputs, labels)
 
-        # Backward pass
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
 
-        # Metrics
         total_loss += loss.item()
         _, predicted = torch.max(outputs.data, 1)
         total += labels.size(0)
@@ -31,13 +129,10 @@ def train_epoch(model, dataloader, criterion, optimizer, device):
 
     avg_loss = total_loss / len(dataloader)
     accuracy = 100 * correct / total
-
     return avg_loss, accuracy
 
 
 def validate(model, dataloader, criterion, device):
-    """Validate the model"""
-
     model.eval()
     total_loss = 0.0
     correct = 0
@@ -46,7 +141,6 @@ def validate(model, dataloader, criterion, device):
     with torch.no_grad():
         for features, labels in dataloader:
             features, labels = features.to(device), labels.to(device)
-
             outputs = model(features)
             loss = criterion(outputs, labels)
 
@@ -57,101 +151,4 @@ def validate(model, dataloader, criterion, device):
 
     avg_loss = total_loss / len(dataloader)
     accuracy = 100 * correct / total
-
     return avg_loss, accuracy
-
-
-def analyze_feature_importance(model, X_test, y_test, feature_names, device):
-    """Analyze which features the model relies on"""
-
-    print("\n" + "=" * 80)
-    print("FEATURE IMPORTANCE ANALYSIS")
-    print("=" * 80)
-
-    # Convert test data to tensor
-    X_tensor = torch.FloatTensor(X_test).to(device)
-    y_tensor = torch.LongTensor(y_test).to(device)
-
-    # Get model predictions
-    model.eval()
-    with torch.no_grad():
-        outputs = model(X_tensor)
-        predictions = torch.argmax(outputs, dim=1).cpu().numpy()
-
-    # Check perfect features (features that perfectly predict output)
-    for i, feature_name in enumerate(feature_names):
-        print(i, feature_name)
-        feature_values = X_test[:, i]
-
-        # Check if this feature alone predicts the output
-        unique_combos = {}
-        for val, pred in zip(feature_values, predictions):
-            val_rounded = round(val, 4)  # Round to avoid float precision issues
-            if val_rounded not in unique_combos:
-                unique_combos[val_rounded] = pred
-            elif unique_combos[val_rounded] != pred:
-                unique_combos[val_rounded] = -1  # Multiple predictions for same value
-
-        # If all unique values map to consistent predictions, this feature is perfect
-        perfect_predictor = all(v != -1 for v in unique_combos.values())
-
-        if perfect_predictor and len(unique_combos) <= 10:
-            print(f"WARNING: {feature_name} might be a PERFECT PREDICTOR!")
-            print(f"   Unique values -> HW types mapping:")
-            for val, hw_type in sorted(unique_combos.items())[:10]:
-                print(f"     {val:.4f} -> HW Type {hw_type + 1}")
-
-    print("=" * 80)
-
-
-def analyze_predictions(model, test_loader, device):
-    """Detailed prediction analysis"""
-
-    model.eval()
-    all_predictions = []
-    all_labels = []
-
-    with torch.no_grad():
-        for features, labels in test_loader:
-            features = features.to(device)
-            outputs = model(features)
-            predictions = torch.argmax(outputs, dim=1)
-
-            all_predictions.extend(predictions.cpu().numpy())
-            all_labels.extend(labels.numpy())
-
-    all_predictions = np.array(all_predictions)
-    all_labels = np.array(all_labels)
-
-    print("\n" + "=" * 80)
-    print("PREDICTION ANALYSIS")
-    print("=" * 80)
-
-    # Confusion matrix
-    cm = confusion_matrix(all_labels, all_predictions)
-    print("\nConfusion Matrix:")
-    print("(Rows: True labels, Columns: Predicted labels)")
-    print("\n       Type1  Type2  Type3  Type4")
-    for i, row in enumerate(cm):
-        print(f"Type{i + 1}: {row}")
-
-    # Classification report
-    print("\nClassification Report:")
-    present_labels = sorted(set(all_labels) | set(all_predictions))
-    target_names = [f'HW Type {i+1}' for i in present_labels]
-    print(classification_report(
-        all_labels,
-        all_predictions,
-        labels=present_labels,
-        target_names=target_names,
-        zero_division=0
-    ))
-
-    # Check if model always predicts same class
-    unique_predictions = np.unique(all_predictions)
-    print(f"\nUnique predictions: {unique_predictions + 1}")  # +1 for 1-indexed
-
-    if len(unique_predictions) == 1:
-        print(f"WARNING: Model only predicts HW Type {unique_predictions[0] + 1}!")
-
-    print("=" * 80 + "\n")

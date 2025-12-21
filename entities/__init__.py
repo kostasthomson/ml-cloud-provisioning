@@ -7,6 +7,7 @@ __all__ = [
     "BaseAllocator",
     "HeuristicAllocator",
     "NNAllocator",
+    "EnergyRegressionAllocator",
     "HardwareType",
     "CellStatus",
     "TaskRequirements",
@@ -14,5 +15,9 @@ __all__ = [
     "VMAllocation",
     "AllocationDecision",
     "HealthCheckResponse",
+    "ImplementationOption",
+    "MultiImplAllocationRequest",
+    "EnergyPrediction",
+    "MultiImplAllocationDecision",
     CloudTaskDataset
 ]

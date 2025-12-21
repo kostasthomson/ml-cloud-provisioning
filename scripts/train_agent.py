@@ -5,145 +5,131 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 import torch
 import torch.nn as nn
 import torch.optim as optim
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader, TensorDataset
 from sklearn.model_selection import train_test_split
 import matplotlib.pyplot as plt
-from utility_functions import *
+import numpy as np
+from utility_functions.data_loading_preprocessing import load_and_preprocess_data, normalize_features
+from utility_functions.training_functions import train_epoch_regression, validate_regression, analyze_regression_predictions
 from config import model_configuration as model_config
-from entities import CloudTaskDataset
 from models import EnergyAwareNN
-from torch.utils.data import WeightedRandomSampler
 
 
 def main(training_data_path: str = "training/training_data.csv"):
-    """Main training function"""
-
     print("=" * 60)
-    print("ENERGY-AWARE CLOUD RESOURCE ALLOCATION TRAINING")
+    print("ENERGY PREDICTION MODEL TRAINING")
     print("=" * 60)
 
-    # Load and preprocess data
-    X, y, df = load_and_preprocess_data(training_data_path if training_data_path != "" else model_config.DATA_PATH)
-
-    # Split data
-    X_train, X_temp, y_train, y_temp = train_test_split(
-        X, y, test_size=0.3, random_state=42, stratify=y
-    )
-    X_val, X_test, y_val, y_test = train_test_split(
-        X_temp, y_temp, test_size=0.5, random_state=42, stratify=y_temp
+    X, y, df, feature_names = load_and_preprocess_data(
+        training_data_path if training_data_path != "" else model_config.DATA_PATH
     )
 
-    print(f"Dataset splits:")
-    print(f"  Training:   {len(X_train)} samples")
-    print(f"  Validation: {len(X_val)} samples")
-    print(f"  Test:       {len(X_test)} samples")
+    input_size = X.shape[1]
+    print(f"Input features: {input_size}")
+    print(f"Features: {feature_names}")
 
-    # Normalize features
+    X_train, X_temp, y_train, y_temp = train_test_split(X, y, test_size=0.3, random_state=42)
+    X_val, X_test, y_val, y_test = train_test_split(X_temp, y_temp, test_size=0.5, random_state=42)
+
+    print(f"Train: {len(X_train)}, Val: {len(X_val)}, Test: {len(X_test)}")
+
     X_train, X_val, X_test, scaler = normalize_features(X_train, X_val, X_test)
 
-    # Create datasets and dataloaders
-    train_dataset = CloudTaskDataset(X_train, y_train)
-    val_dataset = CloudTaskDataset(X_val, y_val)
-    test_dataset = CloudTaskDataset(X_test, y_test)
+    train_dataset = TensorDataset(
+        torch.FloatTensor(X_train),
+        torch.FloatTensor(y_train)
+    )
+    val_dataset = TensorDataset(
+        torch.FloatTensor(X_val),
+        torch.FloatTensor(y_val)
+    )
+    test_dataset = TensorDataset(
+        torch.FloatTensor(X_test),
+        torch.FloatTensor(y_test)
+    )
 
     train_loader = DataLoader(train_dataset, batch_size=model_config.BATCH_SIZE, shuffle=True)
     val_loader = DataLoader(val_dataset, batch_size=model_config.BATCH_SIZE)
     test_loader = DataLoader(test_dataset, batch_size=model_config.BATCH_SIZE)
 
-    # Initialize model
-    model = EnergyAwareNN(
-        model_config.INPUT_SIZE,
-        model_config.HIDDEN_SIZE,
-        model_config.NUM_CLASSES
-    ).to(model_config.DEVICE)
+    model = EnergyAwareNN(input_size, model_config.HIDDEN_SIZE, output_size=1).to(model_config.DEVICE)
 
-    criterion = nn.CrossEntropyLoss()
+    criterion = nn.MSELoss()
     optimizer = optim.Adam(model.parameters(), lr=model_config.LEARNING_RATE)
+    scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.5, patience=10)
 
-    print(f"Model architecture:")
-    print(model)
-    print(f"Training on: {model_config.DEVICE}")
+    print(f"Model: {model}")
+    print(f"Device: {model_config.DEVICE}")
 
-    # Training loop
     train_losses = []
     val_losses = []
-    train_accs = []
-    val_accs = []
+    best_val_loss = float('inf')
 
-    best_val_acc = 0.0
-
-    print(f"Starting training for {model_config.NUM_EPOCHS} epochs...")
+    print(f"Training for {model_config.NUM_EPOCHS} epochs...")
     print("-" * 60)
 
     for epoch in range(model_config.NUM_EPOCHS):
-        train_loss, train_acc = train_epoch(model, train_loader, criterion, optimizer, model_config.DEVICE)
-        val_loss, val_acc = validate(model, val_loader, criterion, model_config.DEVICE)
+        train_loss, train_rmse = train_epoch_regression(model, train_loader, criterion, optimizer, model_config.DEVICE)
+        val_loss, val_rmse, val_mae, val_mape = validate_regression(model, val_loader, criterion, model_config.DEVICE)
 
         train_losses.append(train_loss)
         val_losses.append(val_loss)
-        train_accs.append(train_acc)
-        val_accs.append(val_acc)
 
-        # Save best model
-        if val_acc > best_val_acc:
-            best_val_acc = val_acc
+        scheduler.step(val_loss)
+
+        if val_loss < best_val_loss:
+            best_val_loss = val_loss
             torch.save({
                 'epoch': epoch,
                 'model_state_dict': model.state_dict(),
                 'optimizer_state_dict': optimizer.state_dict(),
                 'scaler': scaler,
-                'val_acc': val_acc
+                'val_loss': val_loss,
+                'input_size': input_size,
+                'hidden_size': model_config.HIDDEN_SIZE,
+                'feature_names': feature_names
             }, f"{model.directory}/model.pth")
 
         if (epoch + 1) % 10 == 0:
-            print(f"Epoch [{epoch + 1}/{model_config.NUM_EPOCHS}] "
-                  f"Train Loss: {train_loss:.4f}, Train Acc: {train_acc:.2f}% | "
-                  f"Val Loss: {val_loss:.4f}, Val Acc: {val_acc:.2f}%")
+            print(f"Epoch {epoch+1}/{model_config.NUM_EPOCHS} | Train RMSE: {train_rmse:.6f} | Val RMSE: {val_rmse:.6f} | Val MAE: {val_mae:.6f}")
 
-    # Test evaluation
-    test_loss, test_acc = validate(model, test_loader, criterion, model_config.DEVICE)
-    print(f"Test Accuracy: {test_acc:.2f}%")
+    print("-" * 60)
 
-    # Feature importance analysis
-    feature_names = [
-        'num_vms', 'cpu_req', 'mem_req', 'total_cpu_req',
-        'util_cpu_before', 'util_mem_before', 'avail_cpu_before',
-        'avail_mem_before', 'avail_storage_before', 'avail_accelerators_before'
-    ]
-    analyze_feature_importance(model, X_test, y_test, feature_names, model_config.DEVICE)
+    test_loss, test_rmse, test_mae, test_mape = validate_regression(model, test_loader, criterion, model_config.DEVICE)
+    print(f"Test RMSE: {test_rmse:.6f} kWh")
+    print(f"Test MAE: {test_mae:.6f} kWh")
+    print(f"Test MAPE: {test_mape:.2f}%")
 
-    analyze_predictions(model, test_loader, model_config.DEVICE)
+    df_test = df.iloc[-len(y_test):].reset_index(drop=True)
+    analyze_regression_predictions(model, test_loader, model_config.DEVICE, df_test)
 
-    # Plot training curves
-    plt.figure(figsize=(12, 4))
-
+    plt.figure(figsize=(10, 4))
     plt.subplot(1, 2, 1)
-    plt.plot(train_losses, label='Train Loss')
-    plt.plot(val_losses, label='Val Loss')
+    plt.plot(train_losses, label='Train')
+    plt.plot(val_losses, label='Val')
     plt.xlabel('Epoch')
-    plt.ylabel('Loss')
+    plt.ylabel('MSE Loss')
     plt.legend()
-    plt.title('Training and Validation Loss')
+    plt.title('Training Loss')
 
     plt.subplot(1, 2, 2)
-    plt.plot(train_accs, label='Train Acc')
-    plt.plot(val_accs, label='Val Acc')
+    plt.plot(np.sqrt(train_losses), label='Train')
+    plt.plot(np.sqrt(val_losses), label='Val')
     plt.xlabel('Epoch')
-    plt.ylabel('Accuracy (%)')
+    plt.ylabel('RMSE (kWh)')
     plt.legend()
-    plt.title('Training and Validation Accuracy')
+    plt.title('RMSE over Training')
 
     plt.tight_layout()
     plt.savefig(f"{model.directory}/training_curves.png")
-    print(f"Training curves saved to {model.directory}/training_curves.png")
+    print(f"Saved training curves to {model.directory}/training_curves.png")
 
-    print(f"Best validation accuracy: {best_val_acc:.2f}%")
-    print(f"Model saved to {model.directory}/model.pth")
+    print(f"Best model saved to {model.directory}/model.pth")
 
 
 if __name__ == "__main__":
     import argparse
-    parser = argparse.ArgumentParser(description='Train energy-aware allocation model')
-    parser.add_argument('data_path', nargs='?', default='../training/training_data.csv', help='Path to training data CSV')
+    parser = argparse.ArgumentParser()
+    parser.add_argument('data_path', nargs='?', default='../training/training_data.csv')
     args = parser.parse_args()
     main(args.data_path)
