@@ -8,6 +8,5 @@ numpy
 grpcio
 grpcio-tools
 pandas
-torch==2.8.0
 scikit-learn
 matplotlib
