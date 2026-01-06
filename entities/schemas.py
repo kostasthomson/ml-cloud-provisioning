@@ -208,3 +208,168 @@ class MultiImplAllocationDecision(BaseModel):
     reason: Optional[str] = Field(None, description="Explanation of decision")
     allocation_method: str = Field(..., description="Method used for allocation")
     timestamp: float = Field(..., description="Decision timestamp")
+
+
+class ResourceUsage(BaseModel):
+    """Resource consumption by a task."""
+    vcpus: float = Field(..., description="vCPUs used")
+    memory: float = Field(..., description="Memory used (GB)")
+    storage: float = Field(default=0.0, description="Storage used (TB)")
+    network: float = Field(default=0.0, description="Network bandwidth used")
+    accelerators: int = Field(default=0, description="Accelerators used")
+
+
+class OngoingTask(BaseModel):
+    """Information about a currently running task on a hardware type."""
+    task_id: str = Field(..., description="Task identifier")
+    remaining_instructions: float = Field(..., description="Instructions left to execute")
+    resources_used: ResourceUsage = Field(..., description="Resources consumed by this task")
+    estimated_remaining_time_sec: float = Field(..., description="Estimated seconds until completion")
+    accelerator_rho: float = Field(default=0.0, description="Accelerator utilization ratio")
+
+
+class HardwareTypeStatus(BaseModel):
+    """Extended hardware type status including ongoing tasks for scoring allocation."""
+    hw_type_id: int = Field(..., description="Hardware type ID (1=CPU, 2=GPU, 3=DFE, 4=MIC)")
+    hw_type_name: str = Field(..., description="Hardware type name")
+    num_servers: int = Field(..., description="Total servers of this type")
+    total_cpus: float = Field(..., description="Total CPUs across all servers")
+    total_memory: float = Field(..., description="Total memory (GB)")
+    total_storage: float = Field(..., description="Total storage (TB)")
+    total_network: float = Field(..., description="Total network bandwidth")
+    total_accelerators: int = Field(default=0, description="Total accelerators")
+    available_cpus: float = Field(..., description="Available CPUs")
+    available_memory: float = Field(..., description="Available memory (GB)")
+    available_storage: float = Field(..., description="Available storage (TB)")
+    available_network: float = Field(..., description="Available network bandwidth")
+    available_accelerators: int = Field(default=0, description="Available accelerators")
+    compute_capability_per_cpu: float = Field(..., description="MIPS per CPU")
+    accelerator_compute_capability: float = Field(default=0.0, description="MIPS per accelerator")
+    cpu_idle_power: float = Field(..., description="CPU idle power (W)")
+    cpu_max_power: float = Field(..., description="CPU max power (W)")
+    acc_idle_power: float = Field(default=0.0, description="Accelerator idle power (W)")
+    acc_max_power: float = Field(default=0.0, description="Accelerator max power (W)")
+    ongoing_tasks: List[OngoingTask] = Field(default_factory=list, description="Currently running tasks")
+
+
+class ScoringWeights(BaseModel):
+    """Configurable weights for multi-objective scoring (must sum to 1.0)."""
+    energy: float = Field(default=0.25, ge=0.0, le=1.0, description="Weight for energy consumption")
+    exec_time: float = Field(default=0.25, ge=0.0, le=1.0, description="Weight for execution time")
+    network: float = Field(default=0.20, ge=0.0, le=1.0, description="Weight for network utilization")
+    ram: float = Field(default=0.15, ge=0.0, le=1.0, description="Weight for RAM utilization")
+    storage: float = Field(default=0.15, ge=0.0, le=1.0, description="Weight for storage utilization")
+
+    @validator('storage')
+    def weights_must_sum_to_one(cls, v, values):
+        total = values.get('energy', 0) + values.get('exec_time', 0) + \
+                values.get('network', 0) + values.get('ram', 0) + v
+        if abs(total - 1.0) > 0.01:
+            raise ValueError(f'Weights must sum to 1.0, got {total}')
+        return v
+
+
+class ScoringTaskImplementation(BaseModel):
+    """Task implementation option for scoring-based allocation."""
+    impl_id: int = Field(..., description="Implementation ID (maps to compatible HW type)")
+    instructions: float = Field(..., description="Total work in instructions/FLOPS")
+    vcpus_per_vm: int = Field(..., description="vCPUs required per VM")
+    memory_per_vm: float = Field(..., description="Memory per VM (GB)")
+    storage_per_vm: float = Field(default=0.1, description="Storage per VM (TB)")
+    network_per_vm: float = Field(default=0.01, description="Network bandwidth per VM")
+    requires_accelerator: bool = Field(default=False, description="Whether accelerator is required")
+    accelerator_rho: float = Field(default=0.0, description="Accelerator utilization ratio (0-1)")
+
+
+class ScoringAllocationRequest(BaseModel):
+    """Request for multi-objective scoring-based allocation."""
+    timestamp: float = Field(..., description="Current simulation timestamp")
+    task_id: str = Field(..., description="Unique task identifier")
+    num_vms: int = Field(..., description="Number of VMs to allocate")
+    implementations: List[ScoringTaskImplementation] = Field(..., description="Available task implementations")
+    hw_types: List[HardwareTypeStatus] = Field(..., description="Hardware types with current state")
+    weights: Optional[ScoringWeights] = Field(None, description="Per-request weight override")
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "timestamp": 100.0,
+                "task_id": "task_001",
+                "num_vms": 4,
+                "implementations": [
+                    {
+                        "impl_id": 1,
+                        "instructions": 1e10,
+                        "vcpus_per_vm": 4,
+                        "memory_per_vm": 16.0,
+                        "requires_accelerator": False
+                    },
+                    {
+                        "impl_id": 2,
+                        "instructions": 1e10,
+                        "vcpus_per_vm": 2,
+                        "memory_per_vm": 8.0,
+                        "requires_accelerator": True,
+                        "accelerator_rho": 0.85
+                    }
+                ],
+                "hw_types": [
+                    {
+                        "hw_type_id": 1,
+                        "hw_type_name": "CPU",
+                        "num_servers": 100,
+                        "total_cpus": 2000,
+                        "total_memory": 12800,
+                        "total_storage": 100,
+                        "total_network": 40,
+                        "available_cpus": 1500,
+                        "available_memory": 10000,
+                        "available_storage": 80,
+                        "available_network": 30,
+                        "compute_capability_per_cpu": 4400,
+                        "cpu_idle_power": 163,
+                        "cpu_max_power": 220,
+                        "ongoing_tasks": []
+                    }
+                ],
+                "weights": {
+                    "energy": 0.25,
+                    "exec_time": 0.25,
+                    "network": 0.20,
+                    "ram": 0.15,
+                    "storage": 0.15
+                }
+            }
+        }
+
+
+class MetricBreakdown(BaseModel):
+    """Breakdown of a single metric's contribution to the score."""
+    raw_value: float = Field(..., description="Raw metric value before normalization")
+    normalized: float = Field(..., description="Normalized value in [0,1] range")
+    weighted: float = Field(..., description="Weighted contribution to final score")
+
+
+class HWScore(BaseModel):
+    """Scoring result for a specific (implementation, hardware) combination."""
+    hw_type_id: int = Field(..., description="Hardware type ID")
+    hw_type_name: str = Field(..., description="Hardware type name")
+    impl_id: int = Field(..., description="Implementation ID used")
+    total_score: float = Field(..., description="Total weighted score (lower is better)")
+    feasible: bool = Field(..., description="Whether this allocation is feasible")
+    rejection_reason: Optional[str] = Field(None, description="Reason if not feasible")
+    metrics: Dict[str, MetricBreakdown] = Field(default_factory=dict, description="Per-metric breakdown")
+
+
+class ScoringAllocationResponse(BaseModel):
+    """Response for scoring-based allocation with full breakdown."""
+    success: bool = Field(..., description="Whether allocation is possible")
+    selected_hw_type_id: Optional[int] = Field(None, description="Selected hardware type ID")
+    selected_impl_id: Optional[int] = Field(None, description="Selected implementation ID")
+    total_score: Optional[float] = Field(None, description="Score of selected option (lower is better)")
+    estimated_exec_time_sec: Optional[float] = Field(None, description="Estimated execution time in seconds")
+    estimated_energy_kwh: Optional[float] = Field(None, description="Estimated energy consumption in kWh")
+    all_scores: List[HWScore] = Field(default_factory=list, description="Scores for all evaluated candidates")
+    weights_used: ScoringWeights = Field(..., description="Weights that were applied")
+    reason: Optional[str] = Field(None, description="Explanation of the decision")
+    timestamp: float = Field(..., description="Decision timestamp")

@@ -10,22 +10,26 @@ from contextlib import asynccontextmanager
 from config import fast_api_configuration
 from entities import BaseAllocator, HeuristicAllocator, NNAllocator, EnergyRegressionAllocator, \
     AllocationRequest, AllocationDecision, HealthCheckResponse, \
-    MultiImplAllocationRequest, MultiImplAllocationDecision, EnergyPrediction, VMAllocation
+    MultiImplAllocationRequest, MultiImplAllocationDecision, EnergyPrediction, VMAllocation, \
+    ScoringAllocator, ScoringAllocationRequest, ScoringAllocationResponse, ScoringWeights, \
+    RLAllocator
 from models import NeuralNetwork, EnergyAwareNN
 from utils import setup_logging
+from rl.api import router as rl_router
 
 # Setup logging
 setup_logging()
 logger = logging.getLogger(__name__)
 
-# Global allocator instance
+# Global allocator instances
 allocator: BaseAllocator = None
+scoring_allocator: ScoringAllocator = None
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Lifespan context manager for startup and shutdown events."""
-    global allocator
+    global allocator, scoring_allocator
 
     # Startup
     logger.info(f"Starting {fast_api_configuration.app_name} v{fast_api_configuration.app_version}")
@@ -40,9 +44,15 @@ async def lifespan(app: FastAPI):
         allocator = NNAllocator(NeuralNetwork.parent_directory)
     elif allocator_type == "energy_regression":
         allocator = EnergyRegressionAllocator()
+    elif allocator_type == "rl":
+        allocator = RLAllocator()
     else:
-        logger.warning(f"Unknown allocator type: {allocator_type}, defaulting to energy_regression")
-        allocator = EnergyRegressionAllocator()
+        logger.warning(f"Unknown allocator type: {allocator_type}, defaulting to rl")
+        allocator = RLAllocator()
+
+    # Initialize scoring allocator (always available)
+    scoring_allocator = ScoringAllocator()
+    logger.info("Scoring allocator initialized")
 
     logger.info("Task allocator initialized")
     logger.info("Task allocator and allocation logger initialized")
@@ -54,6 +64,9 @@ async def lifespan(app: FastAPI):
     logger.info("Shutting down application")
     stats = allocator.get_statistics()
     logger.info(f"Final statistics: {stats}")
+
+    scoring_stats = scoring_allocator.get_statistics()
+    logger.info(f"Scoring allocator statistics: {scoring_stats}")
 
     allocator.save_logs()
     logger.info("Allocation decisions saved to file")
@@ -76,6 +89,9 @@ if fast_api_configuration.enable_cors:
         allow_methods=["*"],
         allow_headers=["*"],
     )
+
+# Include RL router
+app.include_router(rl_router)
 
 
 @app.get("/", response_model=HealthCheckResponse)
@@ -299,6 +315,119 @@ async def allocate_multi_impl(request: MultiImplAllocationRequest) -> MultiImplA
         raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
 
 
+@app.get("/weights", response_model=ScoringWeights)
+async def get_weights():
+    """
+    Get current global scoring weights.
+
+    Returns the weights used for multi-objective scoring when no
+    per-request weights are provided.
+    """
+    return scoring_allocator.global_weights
+
+
+@app.put("/weights", response_model=ScoringWeights)
+async def set_weights(weights: ScoringWeights):
+    """
+    Set global scoring weights.
+
+    Updates the default weights used for multi-objective scoring.
+    Weights must sum to 1.0.
+
+    Args:
+        weights: New scoring weights configuration
+
+    Returns:
+        Updated weights configuration
+    """
+    try:
+        scoring_allocator.set_global_weights(weights)
+        logger.info(f"Global weights updated: {weights.model_dump()}")
+        return scoring_allocator.global_weights
+    except Exception as e:
+        logger.error(f"Error setting weights: {str(e)}")
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@app.post("/allocate_scoring", response_model=ScoringAllocationResponse)
+async def allocate_scoring(request: ScoringAllocationRequest) -> ScoringAllocationResponse:
+    """
+    Multi-objective scoring-based allocation endpoint.
+
+    Evaluates all (implementation, hardware) combinations using weighted scoring
+    across 5 metrics: energy, execution time, network utilization, RAM utilization,
+    and storage utilization. Returns the combination with the lowest score.
+
+    Features:
+    - Time-aware execution estimation with partial allocation model
+    - Considers ongoing tasks and when they will free resources
+    - Per-request weight override or global weights
+    - Full breakdown of all metrics for each candidate
+
+    Args:
+        request: ScoringAllocationRequest with task implementations, HW state, and optional weights
+
+    Returns:
+        ScoringAllocationResponse with selected HW/impl and full scoring breakdown
+
+    Raises:
+        HTTPException: If request processing fails
+    """
+    try:
+        logger.info(
+            f"Scoring allocation request for task {request.task_id} "
+            f"at timestamp {request.timestamp}, "
+            f"{len(request.implementations)} implementations, "
+            f"{len(request.hw_types)} HW types"
+        )
+
+        if not request.hw_types:
+            raise HTTPException(
+                status_code=400,
+                detail="Request must contain at least one hardware type"
+            )
+
+        if not request.implementations:
+            raise HTTPException(
+                status_code=400,
+                detail="Request must contain at least one implementation"
+            )
+
+        decision = scoring_allocator.allocate(request)
+
+        logger.info(
+            f"Scoring decision for task {request.task_id}: "
+            f"{'SUCCESS' if decision.success else 'REJECTED'}"
+            f"{f', HW={decision.selected_hw_type_id}, impl={decision.selected_impl_id}' if decision.success else ''}"
+        )
+
+        return decision
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error processing scoring allocation request: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+
+
+@app.get("/scoring_statistics")
+async def get_scoring_statistics():
+    """
+    Get scoring allocator statistics.
+
+    Returns statistics about scoring-based allocation decisions.
+    """
+    try:
+        stats = scoring_allocator.get_statistics()
+        return {
+            "status": "success",
+            "statistics": stats
+        }
+    except Exception as e:
+        logger.error(f"Error retrieving scoring statistics: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 if __name__ == "__main__":
     import uvicorn
 
@@ -306,6 +435,6 @@ if __name__ == "__main__":
         "main:app",
         host=fast_api_configuration.api_host,
         port=fast_api_configuration.api_port,
-        reload=True,  # Enable auto-reload during development
+        reload=True,
         log_level=fast_api_configuration.log_level.lower()
     )

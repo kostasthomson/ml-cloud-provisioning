@@ -26,7 +26,7 @@ class EnergyRegressionAllocator(BaseAllocator):
 
         self.model_path = model_path
         self.training_data_path = training_data_path
-        self.feature_names = self._get_feature_names()
+        self.feature_names = []
         self.scaler = self._fit_scaler()
         self.model = self._load_model()
 
@@ -36,20 +36,21 @@ class EnergyRegressionAllocator(BaseAllocator):
     def get_method_name(self) -> str:
         return "energy_regression"
 
-    def _get_feature_names(self):
-        return [
-            'num_vms', 'cpu_req', 'mem_req', 'storage_req', 'network_req',
-            'acc_req', 'rho_acc', 'requested_instructions',
-            'util_cpu_before', 'util_mem_before',
-            'avail_cpu_before', 'avail_mem_before', 'avail_storage_before', 'avail_accelerators_before',
-            'total_cpu', 'total_mem', 'total_storage', 'total_accelerators',
-            'avail_network', 'total_network', 'util_network',
-            'cpu_idle_power', 'cpu_max_power', 'acc_idle_power', 'acc_max_power',
-            'compute_cap_per_cpu', 'compute_cap_acc',
-            'running_vms', 'overcommit_cpu', 'overcommit_mem', 'num_tasks',
-            'total_cpu_req', 'total_mem_req', 'total_storage_req',
-            'power_range', 'cpu_util_ratio'
-        ]
+    def _get_candidate_features(self):
+        return {
+            'task': ['num_vms', 'cpu_req', 'mem_req'],
+            'task_optional': ['storage_req', 'network_req', 'acc_req', 'rho_acc', 'requested_instructions'],
+            'hw_state': [
+                'util_cpu_before', 'util_mem_before',
+                'avail_cpu_before', 'avail_mem_before', 'avail_storage_before', 'avail_accelerators_before',
+                'total_cpu', 'total_mem', 'total_storage', 'total_accelerators',
+                'avail_network', 'total_network', 'util_network',
+                'cpu_idle_power', 'cpu_max_power', 'acc_idle_power', 'acc_max_power',
+                'compute_cap_per_cpu', 'compute_cap_acc',
+                'running_vms', 'overcommit_cpu', 'overcommit_mem', 'num_tasks'
+            ],
+            'derived': ['total_cpu_req', 'total_mem_req', 'total_storage_req', 'power_range', 'cpu_util_ratio']
+        }
 
     def _fit_scaler(self):
         logger.info(f"Fitting scaler from {self.training_data_path}...")
@@ -58,11 +59,39 @@ class EnergyRegressionAllocator(BaseAllocator):
         df = df[df['chosen_hw_type'] > 0].reset_index(drop=True)
         df = df[df['energy_kwh'] > 0].reset_index(drop=True)
 
+        candidates = self._get_candidate_features()
+        available_features = []
+
+        for feat in candidates['task']:
+            if feat in df.columns:
+                available_features.append(feat)
+
+        for feat in candidates['task_optional']:
+            if feat in df.columns:
+                available_features.append(feat)
+
+        for feat in candidates['hw_state']:
+            if feat in df.columns:
+                available_features.append(feat)
+
         df['total_cpu_req'] = df['num_vms'] * df['cpu_req']
         df['total_mem_req'] = df['num_vms'] * df['mem_req']
-        df['total_storage_req'] = df['num_vms'] * df['storage_req']
-        df['power_range'] = df['cpu_max_power'] - df['cpu_idle_power']
-        df['cpu_util_ratio'] = df['avail_cpu_before'] / (df['total_cpu'] + 1e-6)
+        available_features.extend(['total_cpu_req', 'total_mem_req'])
+
+        if 'storage_req' in df.columns:
+            df['total_storage_req'] = df['num_vms'] * df['storage_req']
+            available_features.append('total_storage_req')
+
+        if 'cpu_idle_power' in df.columns and 'cpu_max_power' in df.columns:
+            df['power_range'] = df['cpu_max_power'] - df['cpu_idle_power']
+            available_features.append('power_range')
+
+        if 'avail_cpu_before' in df.columns and 'total_cpu' in df.columns:
+            df['cpu_util_ratio'] = df['avail_cpu_before'] / (df['total_cpu'] + 1e-6)
+            available_features.append('cpu_util_ratio')
+
+        self.feature_names = available_features
+        logger.info(f"Using {len(self.feature_names)} features: {self.feature_names}")
 
         X = df[self.feature_names].values
         X = np.nan_to_num(X, nan=0.0, posinf=1e10, neginf=-1e10)
@@ -170,11 +199,14 @@ class EnergyRegressionAllocator(BaseAllocator):
 
         features['total_cpu_req'] = features['num_vms'] * features['cpu_req']
         features['total_mem_req'] = features['num_vms'] * features['mem_req']
-        features['total_storage_req'] = features['num_vms'] * features['storage_req']
-        features['power_range'] = features['cpu_max_power'] - features['cpu_idle_power']
-        features['cpu_util_ratio'] = features['avail_cpu_before'] / (features['total_cpu'] + 1e-6)
+        if 'total_storage_req' in self.feature_names:
+            features['total_storage_req'] = features['num_vms'] * features.get('storage_req', 0.1)
+        if 'power_range' in self.feature_names:
+            features['power_range'] = features['cpu_max_power'] - features['cpu_idle_power']
+        if 'cpu_util_ratio' in self.feature_names:
+            features['cpu_util_ratio'] = features['avail_cpu_before'] / (features['total_cpu'] + 1e-6)
 
-        vector = np.array([features[name] for name in self.feature_names], dtype=np.float32)
+        vector = np.array([features.get(name, 0.0) for name in self.feature_names], dtype=np.float32)
         return vector
 
     def _predict_energy(self, feature_vector: np.ndarray) -> float:

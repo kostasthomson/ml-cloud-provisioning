@@ -10,3 +10,5 @@ grpcio-tools
 pandas
 scikit-learn
 matplotlib
+torch
+gymnasium

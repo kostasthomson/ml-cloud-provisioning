@@ -21,7 +21,7 @@ class FastApiConfiguration(BaseSettings):
     # Model Settings
     model_type: str = ""
     default_task_duration: float = 3600.0  # seconds
-    allocator_type: Literal["heuristic", "nn", "energy_regression"] = "energy_regression"
+    allocator_type: Literal["heuristic", "nn", "energy_regression", "rl"] = "rl"
 
     # Performance
     enable_cors: bool = True

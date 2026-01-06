@@ -8,6 +8,8 @@ __all__ = [
     "HeuristicAllocator",
     "NNAllocator",
     "EnergyRegressionAllocator",
+    "ScoringAllocator",
+    "RLAllocator",
     "HardwareType",
     "CellStatus",
     "TaskRequirements",
@@ -19,5 +21,14 @@ __all__ = [
     "MultiImplAllocationRequest",
     "EnergyPrediction",
     "MultiImplAllocationDecision",
+    "ResourceUsage",
+    "OngoingTask",
+    "HardwareTypeStatus",
+    "ScoringWeights",
+    "ScoringTaskImplementation",
+    "ScoringAllocationRequest",
+    "MetricBreakdown",
+    "HWScore",
+    "ScoringAllocationResponse",
     CloudTaskDataset
 ]
