@@ -1,0 +1,24 @@
+{
+  "total_timesteps": 10000,
+  "episodes_completed": 100,
+  "training_time_seconds": 319.629408121109,
+  "final_avg_reward": 35.974012580609894,
+  "model_path": "C:\\projects\\demo\\ml-cloud-provisioning\\models\\rl\\ppo\\model_agnostic.pth",
+  "config": {
+    "learning_rate": 0.0003,
+    "batch_size": 64,
+    "n_epochs": 10,
+    "gamma": 0.99,
+    "env_preset": "medium"
+  },
+  "reward_config": {
+    "energy_weight": 0.8,
+    "sla_weight": 0.15,
+    "rejection_penalty": 0.3,
+    "energy_baseline": 0.005,
+    "energy_excellent_threshold": 0.002,
+    "energy_poor_threshold": 0.01,
+    "running_energy_mean": 0.005,
+    "running_energy_std": 0.005
+  }
+}
