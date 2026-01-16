@@ -137,7 +137,9 @@ class PPOTrainer:
 
         if hasattr(self.config, 'max_steps_per_episode'):
             env.max_steps = self.config.max_steps_per_episode
+            env.episode_length = self.config.max_steps_per_episode
 
+        logger.info(f"Environment max_steps={env.max_steps}, episode_length={env.episode_length}")
         state, info = env.reset()
         episode_reward = 0
         episode_length = 0
@@ -208,6 +210,13 @@ class PPOTrainer:
                     training_stats['episode_lengths'].append(episode_length)
                     self.episodes_completed += 1
                     self.episode_rewards.append(episode_reward)
+
+                    if self.episodes_completed <= 5 or self.episodes_completed % 50 == 0:
+                        logger.info(
+                            f"Episode {self.episodes_completed} complete: "
+                            f"steps={episode_length}, reward={episode_reward:.3f}, "
+                            f"done={done}, truncated={truncated}"
+                        )
 
                     state, info = env.reset()
                     episode_reward = 0

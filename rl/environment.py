@@ -100,8 +100,8 @@ class CloudProvisioningEnv:
         else:
             self.hw_configs = REALISTIC_HW_CONFIGS.get(preset, REALISTIC_HW_CONFIGS['medium'])
 
-        self.episode_length = episode_length
         self.max_steps = max_steps
+        self.episode_length = max_steps
         self.experiences = experiences
         self.experience_idx = 0
         self.reward_calculator = RewardCalculator()
@@ -231,11 +231,13 @@ class CloudProvisioningEnv:
         self.timestamp += np.random.uniform(0.5, 5.0)
         self._update_running_tasks()
 
-        done = self.current_step >= self.episode_length
         truncated = self.current_step >= self.max_steps
+        done = False
 
-        if self.experiences:
-            done = done or self.experience_idx >= len(self.experiences)
+        if self.experiences and self.experience_idx >= len(self.experiences):
+            done = True
+
+        terminated = done or truncated
 
         next_state = self._generate_state()
 
@@ -246,7 +248,7 @@ class CloudProvisioningEnv:
             'total_energy': self.total_energy,
             'acceptance_rate': self.accepted_count / max(self.current_step, 1),
             'steps': self.current_step,
-            'truncated_by_max_steps': truncated and not done
+            'episode_done': terminated
         }
 
         return next_state, reward, done, truncated, info
