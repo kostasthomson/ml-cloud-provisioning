@@ -191,6 +191,7 @@ class RLTrainingConfig(BaseModel):
     n_epochs: int = Field(default=10, gt=0, description="PPO epochs per update")
     clip_range: float = Field(default=0.2, gt=0, le=1, description="PPO clip range")
     total_timesteps: int = Field(default=100000, gt=0, description="Total training timesteps")
+    max_steps_per_episode: int = Field(default=2048, gt=0, description="Max steps before truncating episode")
     reward_weights: Optional[Dict[str, float]] = Field(
         default=None,
         description="Reward component weights: {energy, sla, rejection, efficiency}"

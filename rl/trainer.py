@@ -135,6 +135,9 @@ class PPOTrainer:
         self.current_timestep = 0
         buffer_size = 2048
 
+        if hasattr(self.config, 'max_steps_per_episode'):
+            env.max_steps = self.config.max_steps_per_episode
+
         state, info = env.reset()
         episode_reward = 0
         episode_length = 0
@@ -331,8 +334,22 @@ class PPOTrainer:
             avg_episode_length=float(avg_length)
         )
 
-    def train_from_experiences(self, experiences: List[RLExperience]) -> Dict[str, Any]:
-        """Train from pre-collected experiences (offline RL)."""
+    def train_from_experiences(
+        self,
+        experiences: List[RLExperience],
+        max_steps_per_episode: int = 2048
+    ) -> Dict[str, Any]:
+        """
+        Train from pre-collected experiences (offline RL).
+
+        Args:
+            experiences: List of collected experiences
+            max_steps_per_episode: Maximum steps before truncating episode (default 2048)
+        """
         from .environment import CloudProvisioningEnv
-        env = CloudProvisioningEnv(experiences=experiences)
+        env = CloudProvisioningEnv(
+            experiences=experiences,
+            episode_length=max_steps_per_episode,
+            max_steps=max_steps_per_episode
+        )
         return self.train(env, total_timesteps=len(experiences))

@@ -91,6 +91,7 @@ class CloudProvisioningEnv:
         hw_configs: Optional[List[HWTypeConfig]] = None,
         preset: str = 'medium',
         episode_length: int = 100,
+        max_steps: int = 2048,
         experiences: Optional[List[RLExperience]] = None,
         seed: Optional[int] = None
     ):
@@ -100,6 +101,7 @@ class CloudProvisioningEnv:
             self.hw_configs = REALISTIC_HW_CONFIGS.get(preset, REALISTIC_HW_CONFIGS['medium'])
 
         self.episode_length = episode_length
+        self.max_steps = max_steps
         self.experiences = experiences
         self.experience_idx = 0
         self.reward_calculator = RewardCalculator()
@@ -230,7 +232,10 @@ class CloudProvisioningEnv:
         self._update_running_tasks()
 
         done = self.current_step >= self.episode_length
-        truncated = False
+        truncated = self.current_step >= self.max_steps
+
+        if self.experiences:
+            done = done or self.experience_idx >= len(self.experiences)
 
         next_state = self._generate_state()
 
@@ -239,7 +244,9 @@ class CloudProvisioningEnv:
             'energy': energy,
             'exec_time': exec_time,
             'total_energy': self.total_energy,
-            'acceptance_rate': self.accepted_count / max(self.current_step, 1)
+            'acceptance_rate': self.accepted_count / max(self.current_step, 1),
+            'steps': self.current_step,
+            'truncated_by_max_steps': truncated and not done
         }
 
         return next_state, reward, done, truncated, info
