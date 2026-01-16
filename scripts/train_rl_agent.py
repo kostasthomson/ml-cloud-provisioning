@@ -27,7 +27,8 @@ def train(
     learning_rate: float = 3e-4,
     batch_size: int = 64,
     n_epochs: int = 10,
-    gamma: float = 0.99
+    gamma: float = 0.99,
+    max_steps_per_episode: int = 2048
 ):
     """Train the RL agent."""
     logger.info("Initializing RL agent and environment...")
@@ -39,7 +40,8 @@ def train(
         batch_size=batch_size,
         n_epochs=n_epochs,
         gamma=gamma,
-        total_timesteps=total_timesteps
+        total_timesteps=total_timesteps,
+        max_steps_per_episode=max_steps_per_episode
     )
 
     trainer = PPOTrainer(agent, config)
@@ -47,7 +49,7 @@ def train(
     env = CloudProvisioningEnv()
 
     logger.info(f"Starting training for {total_timesteps} timesteps...")
-    logger.info(f"Config: LR={learning_rate}, batch={batch_size}, epochs={n_epochs}")
+    logger.info(f"Config: LR={learning_rate}, batch={batch_size}, epochs={n_epochs}, max_steps_per_episode={max_steps_per_episode}")
 
     def callback(timestep, info):
         if timestep % 1000 == 0:
@@ -84,6 +86,7 @@ def main():
     parser.add_argument('--batch-size', type=int, default=64, help='Batch size')
     parser.add_argument('--epochs', type=int, default=10, help='PPO epochs per update')
     parser.add_argument('--gamma', type=float, default=0.99, help='Discount factor')
+    parser.add_argument('--max-steps', type=int, default=2048, help='Max steps per episode')
 
     args = parser.parse_args()
 
@@ -93,7 +96,8 @@ def main():
         learning_rate=args.lr,
         batch_size=args.batch_size,
         n_epochs=args.epochs,
-        gamma=args.gamma
+        gamma=args.gamma,
+        max_steps_per_episode=args.max_steps
     )
 
 
