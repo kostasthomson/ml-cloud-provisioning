@@ -30,7 +30,6 @@ from .trainer import PPOTrainer
 from .distributed_trainer import (
     DistributedPPOTrainer,
     VectorizedEnv,
-    run_distributed_training,
 )
 
 __all__ = [
@@ -54,5 +53,4 @@ __all__ = [
     "PPOTrainer",
     "DistributedPPOTrainer",
     "VectorizedEnv",
-    "run_distributed_training",
 ]
