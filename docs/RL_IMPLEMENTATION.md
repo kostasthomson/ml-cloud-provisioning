@@ -141,7 +141,7 @@ rl/
 
 ## State Space
 
-The state is encoded as an 81-dimensional normalized vector:
+The state is encoded as a normalized vector with dimensions depending on the number of HW types:
 
 ### Task Features (12 dimensions)
 | Index | Feature | Normalization |
@@ -154,10 +154,13 @@ The state is encoded as an 81-dimensional normalized vector:
 | 5 | log10(instructions) | / 15 |
 | 6 | requires_accelerator | boolean |
 | 7 | accelerator_rho | [0, 1] |
-| 8-11 | compatible_hw_types | one-hot [4] |
+| 8 | num_compatible_hw_types | / 10 |
+| 9 | has_deadline | boolean |
+| 10 | deadline (if present) | / 3600 |
+| 11 | resource_intensity | normalized composite |
 
-### Hardware Type Features (64 dimensions = 4 types × 16 features)
-For each HW type (1-4):
+### Hardware Type Features (N × 16 dimensions, where N = number of HW types)
+For each HW type:
 | Index | Feature | Normalization |
 |-------|---------|---------------|
 | 0 | utilization_cpu | [0, 1] |
@@ -188,22 +191,21 @@ For each HW type (1-4):
 
 ## Action Space
 
-Discrete action space with 5 actions:
+Infrastructure-agnostic discrete action space:
 
-| Action ID | Name | Description |
-|-----------|------|-------------|
-| 0 | ALLOCATE_CPU | Allocate to HW Type 1 (CPU-only) |
-| 1 | ALLOCATE_GPU | Allocate to HW Type 2 (GPU) |
-| 2 | ALLOCATE_DFE | Allocate to HW Type 3 (DFE) |
-| 3 | ALLOCATE_MIC | Allocate to HW Type 4 (MIC) |
-| 4 | REJECT | Reject the task |
+| Action | Description |
+|--------|-------------|
+| hw_type_id | Allocate to specified HW type (e.g., 1, 2, 3...) |
+| -1 | Reject the task |
+
+The action space size is N+1 where N = number of hardware types in the environment. Actions directly map to hardware type IDs, not fixed indices.
 
 ### Action Masking
 
 Invalid actions are masked based on:
-- Task compatibility with HW type
+- Task compatibility with HW type (`compatible_hw_types` field)
 - Resource availability (CPU, memory, accelerators)
-- Reject action is always valid
+- Reject action (-1) is always valid
 
 ## Reward Function
 
@@ -505,6 +507,68 @@ Example: 49.56 / 100 = 0.496 per step
 | 50,000 | Development, initial training |
 | 200,000 | Production-ready baseline |
 | 1,000,000+ | Best performance, diminishing returns |
+
+## Distributed Training
+
+The RL module supports multi-GPU distributed training using PyTorch DistributedDataParallel (DDP).
+
+### Architecture
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    Training Orchestrator                      │
+└──────────────────────────┬──────────────────────────────────┘
+                           │
+        ┌──────────────────┼──────────────────┐
+        ▼                  ▼                  ▼
+┌───────────────┐  ┌───────────────┐  ┌───────────────┐
+│    GPU 0      │  │    GPU 1      │  │    GPU N      │
+│ ┌───────────┐ │  │ ┌───────────┐ │  │ ┌───────────┐ │
+│ │  Policy   │ │  │ │  Policy   │ │  │ │  Policy   │ │
+│ │   (DDP)   │ │  │ │   (DDP)   │ │  │ │   (DDP)   │ │
+│ └───────────┘ │  │ └───────────┘ │  │ └───────────┘ │
+│ ┌───────────┐ │  │ ┌───────────┐ │  │ ┌───────────┐ │
+│ │ VecEnv    │ │  │ │ VecEnv    │ │  │ │ VecEnv    │ │
+│ │ (4 envs)  │ │  │ │ (4 envs)  │ │  │ │ (4 envs)  │ │
+│ └───────────┘ │  │ └───────────┘ │  │ └───────────┘ │
+└───────────────┘  └───────────────┘  └───────────────┘
+        │                  │                  │
+        └──────────────────┼──────────────────┘
+                           ▼
+               Synchronized Gradient Updates
+```
+
+### Key Components
+
+| Component | Description |
+|-----------|-------------|
+| `DistributedPPOTrainer` | Multi-GPU trainer with DDP |
+| `VectorizedEnv` | Parallel environment wrapper |
+| `ParallelPPOBuffer` | Buffer for multi-env rollouts |
+
+### Training Commands
+
+```bash
+# Single GPU with 8 parallel environments
+python scripts/train_rl_distributed.py --timesteps 100000 --num-envs 8
+
+# Multi-GPU (auto-detect GPUs)
+python scripts/train_rl_distributed.py --timesteps 100000 --distributed
+
+# Multi-GPU with torchrun (multi-node support)
+torchrun --nproc_per_node=4 scripts/train_rl_distributed.py --timesteps 100000 --use-torchrun
+```
+
+### Scaling Guidelines
+
+| GPUs | Envs/GPU | Effective Batch | Speedup |
+|------|----------|-----------------|---------|
+| 1    | 8        | 8               | 1x      |
+| 2    | 8        | 16              | ~1.8x   |
+| 4    | 8        | 32              | ~3.5x   |
+| 8    | 8        | 64              | ~6x     |
+
+Note: Speedup is sub-linear due to gradient synchronization overhead.
 
 ## Future Improvements
 

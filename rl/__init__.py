@@ -27,6 +27,11 @@ from .state_encoder import StateEncoder
 from .reward import RewardCalculator
 from .environment import CloudProvisioningEnv
 from .trainer import PPOTrainer
+from .distributed_trainer import (
+    DistributedPPOTrainer,
+    VectorizedEnv,
+    run_distributed_training,
+)
 
 __all__ = [
     "RLState",
@@ -47,4 +52,7 @@ __all__ = [
     "RewardCalculator",
     "CloudProvisioningEnv",
     "PPOTrainer",
+    "DistributedPPOTrainer",
+    "VectorizedEnv",
+    "run_distributed_training",
 ]

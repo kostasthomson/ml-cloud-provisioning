@@ -135,4 +135,5 @@ output/*.json
 /*.md
 /training/*.csv
 /output
-/.claude/
+.claude/
+/nul
