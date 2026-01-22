@@ -382,6 +382,19 @@ class DistributedPPOTrainer:
 
         return stats
 
+    def _gather_scalar(self, value: float) -> float:
+        """Gather and sum a scalar value across all processes."""
+        if not self.is_distributed:
+            return value
+        tensor = torch.tensor([value], device=self.device)
+        dist.all_reduce(tensor, op=dist.ReduceOp.SUM)
+        return tensor.item()
+
+    def _gather_mean(self, value: float) -> float:
+        """Gather and average a scalar value across all processes."""
+        total = self._gather_scalar(value)
+        return total / self.world_size
+
     def train(
         self,
         total_timesteps: int,
@@ -408,29 +421,70 @@ class DistributedPPOTrainer:
         vec_env.reset(seed=self.rank * 10000)
 
         if self.is_main_process:
-            logger.info(f"Starting training: {self.world_size} process(es), "
-                       f"{num_envs} envs each, {total_timesteps} total timesteps")
+            print("=" * 70)
+            print(f"DISTRIBUTED PPO TRAINING")
+            print("=" * 70)
+            print(f"  GPUs:                 {self.world_size}")
+            print(f"  Envs per GPU:         {num_envs}")
+            print(f"  Total parallel envs:  {num_envs * self.world_size}")
+            print(f"  Timesteps per GPU:    {timesteps_per_process:,}")
+            print(f"  Total timesteps:      {total_timesteps:,}")
+            print(f"  Rollout steps:        {rollout_steps}")
+            print(f"  Batch size:           {self.batch_size}")
+            print(f"  PPO epochs:           {self.n_epochs}")
+            print(f"  Learning rate:        {self.learning_rate}")
+            print("=" * 70)
+
+        print(f"[GPU {self.rank}] Initialized - device: {self.device}, envs: {num_envs}")
+
+        if self.is_distributed:
+            dist.barrier()
 
         start_time = time.time()
         last_log_step = 0
+        update_count = 0
 
         while self.current_timestep < timesteps_per_process:
             steps, ep_rewards = self.collect_rollouts(vec_env, rollout_steps)
             update_stats = self.update_policy()
+            update_count += 1
 
-            if self.is_main_process and (self.current_timestep - last_log_step) >= log_interval:
+            global_timesteps = self.current_timestep * self.world_size
+            progress_pct = (self.current_timestep / timesteps_per_process) * 100
+
+            if (self.current_timestep - last_log_step) >= log_interval:
                 elapsed = time.time() - start_time
-                fps = (self.current_timestep * self.world_size) / elapsed
-                avg_reward = np.mean(self.metrics.episode_rewards[-100:]) if self.metrics.episode_rewards else 0
+                local_fps = self.current_timestep / elapsed if elapsed > 0 else 0
+                local_avg_reward = np.mean(self.metrics.episode_rewards[-100:]) if self.metrics.episode_rewards else 0
 
-                logger.info(
-                    f"Step {self.current_timestep * self.world_size}/{total_timesteps} | "
-                    f"Episodes: {self.episodes_completed} | "
-                    f"Avg Reward: {avg_reward:.2f} | "
-                    f"FPS: {fps:.0f} | "
-                    f"Policy Loss: {update_stats['policy_loss']:.4f}"
-                )
+                print(f"[GPU {self.rank}] Step {self.current_timestep:,}/{timesteps_per_process:,} "
+                      f"({progress_pct:.1f}%) | Episodes: {self.episodes_completed} | "
+                      f"Reward: {local_avg_reward:.2f} | FPS: {local_fps:.0f}")
+
+                if self.is_distributed:
+                    dist.barrier()
+
+                if self.is_main_process:
+                    total_episodes = int(self._gather_scalar(float(self.episodes_completed)))
+                    global_fps = self._gather_scalar(local_fps)
+                    avg_reward_global = self._gather_mean(local_avg_reward)
+
+                    print("-" * 70)
+                    print(f"[GLOBAL] Step {global_timesteps:,}/{total_timesteps:,} ({progress_pct:.1f}%)")
+                    print(f"         Total Episodes: {total_episodes} | "
+                          f"Avg Reward: {avg_reward_global:.2f} | "
+                          f"Combined FPS: {global_fps:.0f}")
+                    print(f"         Policy Loss: {update_stats['policy_loss']:.4f} | "
+                          f"Value Loss: {update_stats['value_loss']:.4f} | "
+                          f"Entropy: {update_stats['entropy']:.4f}")
+                    print(f"         Elapsed: {elapsed:.1f}s | "
+                          f"ETA: {(elapsed / progress_pct * 100 - elapsed):.1f}s" if progress_pct > 0 else "")
+                    print("-" * 70)
+
                 last_log_step = self.current_timestep
+
+        print(f"[GPU {self.rank}] Training complete - {self.current_timestep:,} steps, "
+              f"{self.episodes_completed} episodes")
 
         if self.is_distributed:
             dist.barrier()
@@ -440,6 +494,19 @@ class DistributedPPOTrainer:
 
         elapsed = time.time() - start_time
         total_steps = self.current_timestep * self.world_size
+
+        if self.is_main_process:
+            total_episodes = int(self._gather_scalar(float(self.episodes_completed)))
+            print("=" * 70)
+            print("TRAINING COMPLETE")
+            print("=" * 70)
+            print(f"  Total timesteps:  {total_steps:,}")
+            print(f"  Total episodes:   {total_episodes}")
+            print(f"  Total time:       {elapsed:.1f}s")
+            print(f"  Throughput:       {total_steps / elapsed:.0f} steps/sec")
+            if save_path:
+                print(f"  Model saved to:   {save_path}")
+            print("=" * 70)
 
         return {
             'total_timesteps': total_steps,
