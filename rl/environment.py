@@ -93,8 +93,25 @@ class CloudProvisioningEnv:
         episode_length: int = 100,
         max_steps: int = 2048,
         experiences: Optional[List[RLExperience]] = None,
-        seed: Optional[int] = None
+        seed: Optional[int] = None,
+        exec_time_noise: float = 0.0,
+        energy_noise: float = 0.0,
+        task_arrival_noise: float = 0.0
     ):
+        """
+        Initialize environment.
+
+        Args:
+            hw_configs: Custom hardware configurations
+            preset: Hardware preset ('small', 'medium', 'large', 'enterprise')
+            episode_length: Steps per episode
+            max_steps: Maximum steps before truncation
+            experiences: Pre-collected experiences for offline training
+            seed: Random seed
+            exec_time_noise: Execution time noise factor (0.0-0.5, e.g., 0.15 = ±15%)
+            energy_noise: Energy estimation noise factor (0.0-0.5)
+            task_arrival_noise: Task characteristic noise factor (0.0-0.3)
+        """
         if hw_configs:
             self.hw_configs = hw_configs
         else:
@@ -105,6 +122,10 @@ class CloudProvisioningEnv:
         self.experiences = experiences
         self.experience_idx = 0
         self.reward_calculator = RewardCalculator()
+
+        self.exec_time_noise = max(0.0, min(0.5, exec_time_noise))
+        self.energy_noise = max(0.0, min(0.5, energy_noise))
+        self.task_arrival_noise = max(0.0, min(0.3, task_arrival_noise))
 
         if seed is not None:
             np.random.seed(seed)
@@ -400,23 +421,35 @@ class CloudProvisioningEnv:
         return cfg.power_idle + util * (cfg.power_max - cfg.power_idle)
 
     def _estimate_exec_time(self, task: TaskState, cfg: HWTypeConfig) -> float:
-        """Estimate execution time for task on HW type."""
+        """Estimate execution time for task on HW type with optional stochastic noise."""
         if task.requires_accelerator and cfg.accelerator_compute > 0:
             compute = cfg.accelerator_compute * task.num_vms * task.accelerator_rho
         else:
             compute = cfg.compute_capability * task.num_vms * task.vcpus_per_vm
 
-        return task.instructions / max(compute * 1e6, 1)
+        base_time = task.instructions / max(compute * 1e6, 1)
+
+        if self.exec_time_noise > 0:
+            noise_factor = np.random.uniform(1 - self.exec_time_noise, 1 + self.exec_time_noise)
+            return base_time * noise_factor
+
+        return base_time
 
     def _estimate_energy(self, task: TaskState, cfg: HWTypeConfig, exec_time: float) -> float:
-        """Estimate energy consumption in kWh."""
+        """Estimate energy consumption in kWh with optional stochastic noise."""
         util_increase = (task.num_vms * task.vcpus_per_vm) / cfg.total_cpus
         power = cfg.power_idle + util_increase * (cfg.power_max - cfg.power_idle)
 
         if task.requires_accelerator and cfg.acc_power_max > 0:
             power += cfg.acc_power_idle + task.accelerator_rho * (cfg.acc_power_max - cfg.acc_power_idle)
 
-        return (power * exec_time) / 3600000
+        base_energy = (power * exec_time) / 3600000
+
+        if self.energy_noise > 0:
+            noise_factor = np.random.uniform(1 - self.energy_noise, 1 + self.energy_noise)
+            return base_energy * noise_factor
+
+        return base_energy
 
     def _update_running_tasks(self):
         """Update running tasks and release resources."""
