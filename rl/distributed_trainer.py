@@ -457,28 +457,20 @@ class DistributedPPOTrainer:
                 local_fps = self.current_timestep / elapsed if elapsed > 0 else 0
                 local_avg_reward = np.mean(self.metrics.episode_rewards[-100:]) if self.metrics.episode_rewards else 0
 
-                print(f"[GPU {self.rank}] Step {self.current_timestep:,}/{timesteps_per_process:,} "
-                      f"({progress_pct:.1f}%) | Episodes: {self.episodes_completed} | "
-                      f"Reward: {local_avg_reward:.2f} | FPS: {local_fps:.0f}")
-
-                if self.is_distributed:
-                    dist.barrier()
-
                 if self.is_main_process:
-                    total_episodes = int(self._gather_scalar(float(self.episodes_completed)))
-                    global_fps = self._gather_scalar(local_fps)
-                    avg_reward_global = self._gather_mean(local_avg_reward)
-
+                    print(f"[GPU {self.rank}] Step {self.current_timestep:,}/{timesteps_per_process:,} "
+                          f"({progress_pct:.1f}%) | Episodes: {self.episodes_completed} | "
+                          f"Reward: {local_avg_reward:.2f} | FPS: {local_fps:.0f}")
                     print("-" * 70)
                     print(f"[GLOBAL] Step {global_timesteps:,}/{total_timesteps:,} ({progress_pct:.1f}%)")
-                    print(f"         Total Episodes: {total_episodes} | "
-                          f"Avg Reward: {avg_reward_global:.2f} | "
-                          f"Combined FPS: {global_fps:.0f}")
+                    print(f"         Avg Reward (GPU 0): {local_avg_reward:.2f} | "
+                          f"FPS (GPU 0): {local_fps:.0f}")
                     print(f"         Policy Loss: {update_stats['policy_loss']:.4f} | "
                           f"Value Loss: {update_stats['value_loss']:.4f} | "
                           f"Entropy: {update_stats['entropy']:.4f}")
-                    print(f"         Elapsed: {elapsed:.1f}s | "
-                          f"ETA: {(elapsed / progress_pct * 100 - elapsed):.1f}s" if progress_pct > 0 else "")
+                    if progress_pct > 0:
+                        print(f"         Elapsed: {elapsed:.1f}s | "
+                              f"ETA: {(elapsed / progress_pct * 100 - elapsed):.1f}s")
                     print("-" * 70)
 
                 last_log_step = self.current_timestep
@@ -489,14 +481,15 @@ class DistributedPPOTrainer:
         if self.is_distributed:
             dist.barrier()
 
-        if self.is_main_process and save_path:
-            self.save(save_path)
-
         elapsed = time.time() - start_time
         total_steps = self.current_timestep * self.world_size
 
+        total_episodes = int(self._gather_scalar(float(self.episodes_completed)))
+
+        if self.is_main_process and save_path:
+            self.save(save_path)
+
         if self.is_main_process:
-            total_episodes = int(self._gather_scalar(float(self.episodes_completed)))
             print("=" * 70)
             print("TRAINING COMPLETE")
             print("=" * 70)
