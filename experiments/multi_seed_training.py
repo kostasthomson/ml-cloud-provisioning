@@ -221,6 +221,33 @@ def compute_statistics(results: List[EvaluationResult]) -> Dict[str, Any]:
     }
 
 
+def _save_checkpoint(config: ExperimentConfig, training_results: List, evaluation_results: List, seeds: List[int], failed_seeds: List[int]):
+    """Save intermediate checkpoint to preserve progress."""
+    checkpoint = {
+        "experiment": "multi_seed_training",
+        "timestamp": datetime.now().isoformat(),
+        "status": "in_progress",
+        "completed_seeds": [r.seed for r in training_results],
+        "failed_seeds": failed_seeds,
+        "training_results": [asdict(r) for r in training_results],
+        "evaluation_results": [
+            {
+                "seed": r.seed,
+                "total_energy_kwh": r.total_energy_kwh,
+                "energy_per_task": r.energy_per_task,
+                "acceptance_rate": r.acceptance_rate,
+                "sla_compliance_rate": r.sla_compliance_rate,
+                "avg_episode_reward": r.avg_episode_reward
+            }
+            for r in evaluation_results
+        ]
+    }
+    checkpoint_path = config.results_dir / "data" / "multi_seed_checkpoint.json"
+    with open(checkpoint_path, 'w') as f:
+        json.dump(checkpoint, f, indent=2, default=str)
+    return checkpoint_path
+
+
 def run_multi_seed_experiment(
     config: ExperimentConfig,
     num_seeds: int = None
@@ -237,21 +264,50 @@ def run_multi_seed_experiment(
     save_dir.mkdir(parents=True, exist_ok=True)
 
     training_results = []
-    for seed in seeds:
-        result = train_single_seed(seed, config, save_dir)
-        training_results.append(result)
-        logger.info(f"Seed {seed}: reward={result.final_reward:.3f}, episodes={result.episodes_completed}")
-
     evaluation_results = []
-    for train_result in training_results:
-        eval_result = evaluate_model(train_result.model_path, train_result.seed, config)
-        evaluation_results.append(eval_result)
+    failed_seeds = []
 
-    statistics = compute_statistics(evaluation_results)
+    for i, seed in enumerate(seeds):
+        logger.info(f"[{i+1}/{len(seeds)}] Training seed {seed}...")
+        try:
+            result = train_single_seed(seed, config, save_dir)
+            training_results.append(result)
+            logger.info(f"Seed {seed}: reward={result.final_reward:.3f}, episodes={result.episodes_completed}")
+
+            logger.info(f"[{i+1}/{len(seeds)}] Evaluating seed {seed}...")
+            eval_result = evaluate_model(result.model_path, seed, config)
+            evaluation_results.append(eval_result)
+            logger.info(f"Seed {seed} evaluation: energy={eval_result.energy_per_task:.6f}, acceptance={eval_result.acceptance_rate:.2%}")
+
+            checkpoint_path = _save_checkpoint(config, training_results, evaluation_results, seeds, failed_seeds)
+            logger.debug(f"Checkpoint saved: {checkpoint_path}")
+
+        except Exception as e:
+            logger.error(f"Seed {seed} FAILED: {e}")
+            failed_seeds.append(seed)
+            _save_checkpoint(config, training_results, evaluation_results, seeds, failed_seeds)
+            continue
+
+    if not evaluation_results:
+        logger.error("All seeds failed! No results to compute.")
+        return {"error": "All seeds failed", "failed_seeds": failed_seeds}
+
+    try:
+        statistics = compute_statistics(evaluation_results)
+    except Exception as e:
+        logger.warning(f"Statistics computation failed: {e}. Using basic stats.")
+        statistics = {
+            "n_seeds": len(evaluation_results),
+            "energy_per_task": {"mean": np.mean([r.energy_per_task for r in evaluation_results]), "std": 0},
+            "acceptance_rate": {"mean": np.mean([r.acceptance_rate for r in evaluation_results]), "std": 0},
+            "sla_compliance_rate": {"mean": np.mean([r.sla_compliance_rate for r in evaluation_results]), "std": 0},
+            "avg_reward": {"mean": np.mean([r.avg_episode_reward for r in evaluation_results]), "std": 0}
+        }
 
     results = {
         "experiment": "multi_seed_training",
         "timestamp": datetime.now().isoformat(),
+        "status": "completed" if not failed_seeds else "partial",
         "config": {
             "seeds": seeds,
             "timesteps": config.training_timesteps,
@@ -260,6 +316,8 @@ def run_multi_seed_experiment(
             "exec_time_noise": config.exec_time_noise,
             "energy_noise": config.energy_noise
         },
+        "completed_seeds": [r.seed for r in training_results],
+        "failed_seeds": failed_seeds,
         "training_results": [asdict(r) for r in training_results],
         "evaluation_results": [
             {
@@ -280,7 +338,10 @@ def run_multi_seed_experiment(
         json.dump(results, f, indent=2, default=str)
     logger.info(f"Results saved to {output_path}")
 
-    print_summary(statistics, seeds)
+    if failed_seeds:
+        logger.warning(f"Completed with {len(failed_seeds)} failed seeds: {failed_seeds}")
+
+    print_summary(statistics, [r.seed for r in training_results])
 
     return results
 

@@ -176,6 +176,22 @@ def compute_pareto_frontier(points: List[ParetoPoint]) -> List[ParetoPoint]:
     return pareto_points
 
 
+def _save_pareto_checkpoint(config: ExperimentConfig, pareto_points: List[ParetoPoint], failed_weights: List[float]):
+    """Save intermediate checkpoint to preserve progress."""
+    checkpoint = {
+        "experiment": "pareto_analysis",
+        "timestamp": datetime.now().isoformat(),
+        "status": "in_progress",
+        "completed_weights": [p.energy_weight for p in pareto_points],
+        "failed_weights": failed_weights,
+        "all_points": [asdict(p) for p in pareto_points]
+    }
+    checkpoint_path = config.results_dir / "data" / "pareto_checkpoint.json"
+    with open(checkpoint_path, 'w') as f:
+        json.dump(checkpoint, f, indent=2)
+    return checkpoint_path
+
+
 def run_pareto_analysis(
     config: ExperimentConfig,
     energy_weights: List[float] = None
@@ -192,27 +208,45 @@ def run_pareto_analysis(
     save_dir.mkdir(parents=True, exist_ok=True)
 
     pareto_points = []
-    for weight in weights:
-        model_path = train_with_energy_weight(weight, config, save_dir)
-        point = evaluate_pareto_point(model_path, weight, config)
-        pareto_points.append(point)
-        logger.info(
-            f"  Energy weight {weight:.2f}: "
-            f"energy={point.avg_energy_per_task:.6f}, "
-            f"acceptance={point.acceptance_rate:.2%}"
-        )
+    failed_weights = []
+
+    for i, weight in enumerate(weights):
+        logger.info(f"[{i+1}/{len(weights)}] Training with energy_weight={weight:.2f}...")
+        try:
+            model_path = train_with_energy_weight(weight, config, save_dir)
+            point = evaluate_pareto_point(model_path, weight, config)
+            pareto_points.append(point)
+            logger.info(
+                f"  Energy weight {weight:.2f}: "
+                f"energy={point.avg_energy_per_task:.6f}, "
+                f"acceptance={point.acceptance_rate:.2%}"
+            )
+            _save_pareto_checkpoint(config, pareto_points, failed_weights)
+
+        except Exception as e:
+            logger.error(f"Energy weight {weight:.2f} FAILED: {e}")
+            failed_weights.append(weight)
+            _save_pareto_checkpoint(config, pareto_points, failed_weights)
+            continue
+
+    if not pareto_points:
+        logger.error("All weights failed! No results to compute.")
+        return {"error": "All weights failed", "failed_weights": failed_weights}
 
     pareto_frontier = compute_pareto_frontier(pareto_points)
 
     results = {
         "experiment": "pareto_analysis",
         "timestamp": datetime.now().isoformat(),
+        "status": "completed" if not failed_weights else "partial",
         "config": {
             "energy_weights": weights,
             "timesteps": config.training_timesteps,
             "evaluation_episodes": config.evaluation_episodes,
             "env_preset": config.env_preset
         },
+        "completed_weights": [p.energy_weight for p in pareto_points],
+        "failed_weights": failed_weights,
         "all_points": [asdict(p) for p in pareto_points],
         "pareto_frontier": [asdict(p) for p in pareto_frontier],
         "summary": {
@@ -234,7 +268,13 @@ def run_pareto_analysis(
         json.dump(results, f, indent=2)
     logger.info(f"Results saved to {output_path}")
 
-    generate_pareto_csv(pareto_points, config.results_dir / "data" / "pareto_data.csv")
+    try:
+        generate_pareto_csv(pareto_points, config.results_dir / "data" / "pareto_data.csv")
+    except Exception as e:
+        logger.warning(f"CSV generation failed: {e}")
+
+    if failed_weights:
+        logger.warning(f"Completed with {len(failed_weights)} failed weights: {failed_weights}")
 
     print_pareto_summary(pareto_points, pareto_frontier)
 

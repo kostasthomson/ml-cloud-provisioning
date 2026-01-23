@@ -195,6 +195,22 @@ def compute_ablation_impact(
     }
 
 
+def _save_ablation_checkpoint(config: ExperimentConfig, ablation_results: List[AblationResult], failed_configs: List[str]):
+    """Save intermediate checkpoint to preserve progress."""
+    checkpoint = {
+        "experiment": "ablation_study",
+        "timestamp": datetime.now().isoformat(),
+        "status": "in_progress",
+        "completed_configs": [r.config_name for r in ablation_results],
+        "failed_configs": failed_configs,
+        "results": [asdict(r) for r in ablation_results]
+    }
+    checkpoint_path = config.results_dir / "data" / "ablation_checkpoint.json"
+    with open(checkpoint_path, 'w') as f:
+        json.dump(checkpoint, f, indent=2)
+    return checkpoint_path
+
+
 def run_ablation_study(
     config: ExperimentConfig,
     ablation_configs: Optional[Dict[str, Dict]] = None
@@ -211,36 +227,58 @@ def run_ablation_study(
     save_dir.mkdir(parents=True, exist_ok=True)
 
     ablation_results = []
-    for config_name, reward_config in configs.items():
-        model_path, training_time = train_ablation_config(
-            config_name, reward_config, config, save_dir
-        )
-        result = evaluate_ablation_config(
-            model_path, config_name, reward_config, config, training_time
-        )
-        ablation_results.append(result)
-        logger.info(
-            f"  {config_name}: energy={result.avg_energy_per_task:.6f}, "
-            f"acceptance={result.acceptance_rate:.2%}, "
-            f"SLA={result.sla_compliance_rate:.2%}"
-        )
+    failed_configs = []
+    config_items = list(configs.items())
+
+    for i, (config_name, reward_config) in enumerate(config_items):
+        logger.info(f"[{i+1}/{len(config_items)}] Training config '{config_name}'...")
+        try:
+            model_path, training_time = train_ablation_config(
+                config_name, reward_config, config, save_dir
+            )
+            result = evaluate_ablation_config(
+                model_path, config_name, reward_config, config, training_time
+            )
+            ablation_results.append(result)
+            logger.info(
+                f"  {config_name}: energy={result.avg_energy_per_task:.6f}, "
+                f"acceptance={result.acceptance_rate:.2%}, "
+                f"SLA={result.sla_compliance_rate:.2%}"
+            )
+            _save_ablation_checkpoint(config, ablation_results, failed_configs)
+
+        except Exception as e:
+            logger.error(f"Config '{config_name}' FAILED: {e}")
+            failed_configs.append(config_name)
+            _save_ablation_checkpoint(config, ablation_results, failed_configs)
+            continue
+
+    if not ablation_results:
+        logger.error("All configurations failed! No results to compute.")
+        return {"error": "All configurations failed", "failed_configs": failed_configs}
 
     full_result = next((r for r in ablation_results if r.config_name == "full"), ablation_results[0])
 
     impact_analysis = {}
     for result in ablation_results:
         if result.config_name != "full":
-            impact_analysis[result.config_name] = compute_ablation_impact(full_result, result)
+            try:
+                impact_analysis[result.config_name] = compute_ablation_impact(full_result, result)
+            except Exception as e:
+                logger.warning(f"Impact analysis for '{result.config_name}' failed: {e}")
 
     results = {
         "experiment": "ablation_study",
         "timestamp": datetime.now().isoformat(),
+        "status": "completed" if not failed_configs else "partial",
         "config": {
             "ablation_configs": configs,
             "timesteps": config.training_timesteps,
             "evaluation_episodes": config.evaluation_episodes,
             "env_preset": config.env_preset
         },
+        "completed_configs": [r.config_name for r in ablation_results],
+        "failed_configs": failed_configs,
         "results": [asdict(r) for r in ablation_results],
         "impact_analysis": impact_analysis,
         "baseline_config": "full"
@@ -251,7 +289,13 @@ def run_ablation_study(
         json.dump(results, f, indent=2)
     logger.info(f"Results saved to {output_path}")
 
-    generate_ablation_csv(ablation_results, config.results_dir / "data" / "ablation_data.csv")
+    try:
+        generate_ablation_csv(ablation_results, config.results_dir / "data" / "ablation_data.csv")
+    except Exception as e:
+        logger.warning(f"CSV generation failed: {e}")
+
+    if failed_configs:
+        logger.warning(f"Completed with {len(failed_configs)} failed configs: {failed_configs}")
 
     print_ablation_summary(ablation_results, impact_analysis)
 

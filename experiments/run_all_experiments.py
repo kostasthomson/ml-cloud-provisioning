@@ -87,12 +87,20 @@ class ExperimentRunner:
                     logger.info(f"  Completed in {exp_duration:.1f}s")
                 except Exception as e:
                     logger.error(f"  FAILED: {e}")
-                    self.results[name] = {"error": str(e)}
+                    import traceback
+                    logger.error(f"  Traceback: {traceback.format_exc()}")
+                    self.results[name] = {"error": str(e), "traceback": traceback.format_exc()}
+
+                self._save_intermediate_results()
 
         self.end_time = datetime.now()
         total_duration = (self.end_time - self.start_time).total_seconds()
 
-        self._generate_summary_report()
+        try:
+            self._generate_summary_report()
+        except Exception as e:
+            logger.error(f"Summary report generation failed: {e}")
+            self._save_intermediate_results()
 
         logger.info("\n" + "=" * 70)
         logger.info("ACADEMIC EVALUATION COMPLETE")
@@ -102,6 +110,21 @@ class ExperimentRunner:
         logger.info("=" * 70)
 
         return self.results
+
+    def _save_intermediate_results(self):
+        """Save intermediate results to preserve progress after each experiment."""
+        checkpoint = {
+            "experiment_suite": "RL Cloud Provisioning Academic Evaluation",
+            "status": "in_progress",
+            "timestamp": datetime.now().isoformat(),
+            "start_time": self.start_time.isoformat() if self.start_time else None,
+            "completed_experiments": list(self.results.keys()),
+            "results": self.results
+        }
+        checkpoint_path = self.config.results_dir / "evaluation_checkpoint.json"
+        with open(checkpoint_path, 'w') as f:
+            json.dump(checkpoint, f, indent=2, default=str)
+        logger.debug(f"Intermediate results saved to {checkpoint_path}")
 
     def _run_multi_seed(self) -> Dict[str, Any]:
         """Run multi-seed training experiment."""

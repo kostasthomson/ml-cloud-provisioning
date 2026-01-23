@@ -191,6 +191,23 @@ def compute_generalization_gap(
     }
 
 
+def _save_generalization_checkpoint(config: ExperimentConfig, results: List[GeneralizationResult], model_path: str, failed_presets: List[str]):
+    """Save intermediate checkpoint to preserve progress."""
+    checkpoint = {
+        "experiment": "generalization_test",
+        "timestamp": datetime.now().isoformat(),
+        "status": "in_progress",
+        "model_path": model_path,
+        "completed_presets": [r.test_preset for r in results],
+        "failed_presets": failed_presets,
+        "results": [asdict(r) for r in results]
+    }
+    checkpoint_path = config.results_dir / "data" / "generalization_checkpoint.json"
+    with open(checkpoint_path, 'w') as f:
+        json.dump(checkpoint, f, indent=2)
+    return checkpoint_path
+
+
 def run_generalization_experiment(
     config: ExperimentConfig,
     train_preset: str = None,
@@ -211,36 +228,62 @@ def run_generalization_experiment(
     save_dir = config.results_dir / "models" / "generalization"
     save_dir.mkdir(parents=True, exist_ok=True)
 
-    model_path = train_generalization_model(train_preset, config, save_dir)
+    try:
+        model_path = train_generalization_model(train_preset, config, save_dir)
+    except Exception as e:
+        logger.error(f"Training FAILED: {e}")
+        return {"error": f"Training failed: {e}", "train_preset": train_preset}
 
     results = []
-    for test_preset in test_presets:
-        result = evaluate_on_preset(model_path, train_preset, test_preset, config)
-        results.append(result)
-        logger.info(
-            f"  {test_preset}: energy={result.avg_energy_per_task:.6f}, "
-            f"acceptance={result.acceptance_rate:.2%}, "
-            f"SLA={result.sla_compliance_rate:.2%}"
-        )
+    failed_presets = []
+
+    for i, test_preset in enumerate(test_presets):
+        logger.info(f"[{i+1}/{len(test_presets)}] Evaluating on '{test_preset}'...")
+        try:
+            result = evaluate_on_preset(model_path, train_preset, test_preset, config)
+            results.append(result)
+            logger.info(
+                f"  {test_preset}: energy={result.avg_energy_per_task:.6f}, "
+                f"acceptance={result.acceptance_rate:.2%}, "
+                f"SLA={result.sla_compliance_rate:.2%}"
+            )
+            _save_generalization_checkpoint(config, results, model_path, failed_presets)
+
+        except Exception as e:
+            logger.error(f"Evaluation on '{test_preset}' FAILED: {e}")
+            failed_presets.append(test_preset)
+            _save_generalization_checkpoint(config, results, model_path, failed_presets)
+            continue
+
+    if not results:
+        logger.error("All evaluations failed! No results to compute.")
+        return {"error": "All evaluations failed", "failed_presets": failed_presets, "model_path": model_path}
 
     same_config_result = next((r for r in results if r.is_same_config), results[0])
     generalization_gaps = {}
     for result in results:
         if not result.is_same_config:
-            generalization_gaps[result.test_preset] = compute_generalization_gap(
-                same_config_result, result
-            )
+            try:
+                generalization_gaps[result.test_preset] = compute_generalization_gap(
+                    same_config_result, result
+                )
+            except Exception as e:
+                logger.warning(f"Gap computation for '{result.test_preset}' failed: {e}")
 
-    avg_gaps = {
-        "avg_energy_gap_pct": np.mean([g["energy_gap_pct"] for g in generalization_gaps.values()]),
-        "avg_acceptance_gap_pct": np.mean([g["acceptance_gap_pct"] for g in generalization_gaps.values()]),
-        "avg_sla_gap_pct": np.mean([g["sla_gap_pct"] for g in generalization_gaps.values()]),
-        "avg_reward_gap_pct": np.mean([g["reward_gap_pct"] for g in generalization_gaps.values()])
-    }
+    if generalization_gaps:
+        avg_gaps = {
+            "avg_energy_gap_pct": np.mean([g["energy_gap_pct"] for g in generalization_gaps.values()]),
+            "avg_acceptance_gap_pct": np.mean([g["acceptance_gap_pct"] for g in generalization_gaps.values()]),
+            "avg_sla_gap_pct": np.mean([g["sla_gap_pct"] for g in generalization_gaps.values()]),
+            "avg_reward_gap_pct": np.mean([g["reward_gap_pct"] for g in generalization_gaps.values()])
+        }
+    else:
+        avg_gaps = {"avg_energy_gap_pct": 0, "avg_acceptance_gap_pct": 0, "avg_sla_gap_pct": 0, "avg_reward_gap_pct": 0}
 
     output = {
         "experiment": "generalization_test",
         "timestamp": datetime.now().isoformat(),
+        "status": "completed" if not failed_presets else "partial",
         "config": {
             "train_preset": train_preset,
             "test_presets": test_presets,
@@ -248,9 +291,11 @@ def run_generalization_experiment(
             "evaluation_episodes": config.evaluation_episodes
         },
         "hw_type_counts": {
-            preset: len(REALISTIC_HW_CONFIGS[preset])
+            preset: len(REALISTIC_HW_CONFIGS.get(preset, []))
             for preset in [train_preset] + test_presets
         },
+        "completed_presets": [r.test_preset for r in results],
+        "failed_presets": failed_presets,
         "results": [asdict(r) for r in results],
         "generalization_gaps": generalization_gaps,
         "average_gaps": avg_gaps,
@@ -262,7 +307,13 @@ def run_generalization_experiment(
         json.dump(output, f, indent=2)
     logger.info(f"Results saved to {output_path}")
 
-    generate_generalization_csv(results, config.results_dir / "data" / "generalization_data.csv")
+    try:
+        generate_generalization_csv(results, config.results_dir / "data" / "generalization_data.csv")
+    except Exception as e:
+        logger.warning(f"CSV generation failed: {e}")
+
+    if failed_presets:
+        logger.warning(f"Completed with {len(failed_presets)} failed presets: {failed_presets}")
 
     print_generalization_summary(results, generalization_gaps, avg_gaps, train_preset)
 
