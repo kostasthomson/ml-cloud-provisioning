@@ -397,7 +397,9 @@ Examples:
 
     args = parser.parse_args()
 
+    global logger
     config = ExperimentConfig()
+    logger = setup_experiment_logging(config, "run_all_experiments")
 
     if args.quick:
         config.num_seeds = 3
