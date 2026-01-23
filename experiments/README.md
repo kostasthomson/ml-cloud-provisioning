@@ -147,6 +147,12 @@ results/academic/
 │   ├── ablation/
 │   └── generalization/
 ├── logs/
+│   ├── run_all_experiments_YYYYMMDD_HHMMSS.log
+│   ├── multi_seed_training_YYYYMMDD_HHMMSS.log
+│   ├── pareto_analysis_YYYYMMDD_HHMMSS.log
+│   ├── ablation_study_YYYYMMDD_HHMMSS.log
+│   ├── generalization_test_YYYYMMDD_HHMMSS.log
+│   └── generate_plots_YYYYMMDD_HHMMSS.log
 └── academic_evaluation_report.json
 ```
 
@@ -190,6 +196,25 @@ env = CloudProvisioningEnv(
 ```
 
 This forces the agent to learn robust policies that handle real-world variance.
+
+## Logging
+
+All experiments use non-blocking async logging via `QueueHandler` to prevent I/O from affecting training performance.
+
+**Log files location**: `results/academic/logs/`
+
+Each experiment generates a timestamped log file:
+- `multi_seed_training_20260124_143052.log`
+- `pareto_analysis_20260124_151023.log`
+- `ablation_study_20260124_160512.log`
+- etc.
+
+Log files contain:
+- DEBUG level: Detailed training steps, parameter updates
+- INFO level: Experiment progress, results summaries
+- WARNING/ERROR: Issues and failures
+
+Console output shows INFO level only; files capture full DEBUG details.
 
 ## Interpreting Results
 

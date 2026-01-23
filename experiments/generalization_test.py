@@ -26,13 +26,9 @@ from rl.environment import CloudProvisioningEnv, REALISTIC_HW_CONFIGS
 from rl.agent import RLAgent
 from rl.trainer import PPOTrainer
 from rl.schemas import RLTrainingConfig
-from experiments.config import ExperimentConfig
+from experiments.config import ExperimentConfig, setup_experiment_logging
 
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(levelname)s - %(message)s'
-)
-logger = logging.getLogger(__name__)
+logger = None
 
 
 @dataclass
@@ -201,6 +197,9 @@ def run_generalization_experiment(
     test_presets: List[str] = None
 ) -> Dict[str, Any]:
     """Run complete generalization experiment."""
+    global logger
+    if logger is None:
+        logger = setup_experiment_logging(config, "generalization_test")
 
     train_preset = train_preset or config.generalization_train_preset
     test_presets = test_presets or config.generalization_test_presets
@@ -351,6 +350,7 @@ def print_generalization_summary(
 
 
 def main():
+    global logger
     parser = argparse.ArgumentParser(description='Generalization experiment')
     parser.add_argument('--train-preset', type=str, default=None,
                         help='Training environment preset')
@@ -363,6 +363,8 @@ def main():
     args = parser.parse_args()
 
     config = ExperimentConfig()
+    logger = setup_experiment_logging(config, "generalization_test")
+
     if args.timesteps:
         config.training_timesteps = args.timesteps
     if args.eval_episodes:

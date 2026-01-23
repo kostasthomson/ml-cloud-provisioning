@@ -7,6 +7,11 @@ Centralized configuration for all experiments to ensure reproducibility.
 from dataclasses import dataclass, field
 from typing import List, Dict, Optional
 from pathlib import Path
+import logging
+import logging.handlers
+from datetime import datetime
+import queue
+import atexit
 
 
 @dataclass
@@ -61,3 +66,80 @@ class ExperimentConfig:
 
 
 DEFAULT_CONFIG = ExperimentConfig()
+
+
+_log_queue = None
+_queue_listener = None
+
+
+def setup_experiment_logging(
+    config: ExperimentConfig,
+    experiment_name: str,
+    console_level: int = logging.INFO,
+    file_level: int = logging.DEBUG
+) -> logging.Logger:
+    """
+    Set up non-blocking async logging with both console and file handlers.
+
+    Uses QueueHandler to prevent file I/O from blocking training/evaluation.
+
+    Args:
+        config: Experiment configuration
+        experiment_name: Name of the experiment (used for log filename)
+        console_level: Logging level for console output
+        file_level: Logging level for file output
+
+    Returns:
+        Configured logger instance
+    """
+    global _log_queue, _queue_listener
+
+    log_dir = config.results_dir / "logs"
+    log_dir.mkdir(parents=True, exist_ok=True)
+
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    log_file = log_dir / f"{experiment_name}_{timestamp}.log"
+
+    logger = logging.getLogger(experiment_name)
+    logger.setLevel(logging.DEBUG)
+    logger.handlers.clear()
+
+    console_handler = logging.StreamHandler()
+    console_handler.setLevel(console_level)
+    console_format = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
+    console_handler.setFormatter(console_format)
+
+    file_handler = logging.FileHandler(log_file, encoding='utf-8')
+    file_handler.setLevel(file_level)
+    file_format = logging.Formatter(
+        '%(asctime)s - %(name)s - %(levelname)s - %(funcName)s:%(lineno)d - %(message)s'
+    )
+    file_handler.setFormatter(file_format)
+
+    if _log_queue is None:
+        _log_queue = queue.Queue(-1)
+
+    if _queue_listener is not None:
+        _queue_listener.stop()
+
+    _queue_listener = logging.handlers.QueueListener(
+        _log_queue, console_handler, file_handler, respect_handler_level=True
+    )
+    _queue_listener.start()
+
+    queue_handler = logging.handlers.QueueHandler(_log_queue)
+    logger.addHandler(queue_handler)
+
+    atexit.register(_shutdown_logging)
+
+    logger.info(f"Async logging initialized. Log file: {log_file}")
+
+    return logger
+
+
+def _shutdown_logging():
+    """Ensure queue listener is stopped on exit."""
+    global _queue_listener
+    if _queue_listener is not None:
+        _queue_listener.stop()
+        _queue_listener = None

@@ -25,13 +25,9 @@ from rl.environment import CloudProvisioningEnv
 from rl.agent import RLAgent
 from rl.trainer import PPOTrainer
 from rl.schemas import RLTrainingConfig
-from experiments.config import ExperimentConfig, DEFAULT_CONFIG
+from experiments.config import ExperimentConfig, DEFAULT_CONFIG, setup_experiment_logging
 
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(levelname)s - %(message)s'
-)
-logger = logging.getLogger(__name__)
+logger = None
 
 
 @dataclass
@@ -230,6 +226,9 @@ def run_multi_seed_experiment(
     num_seeds: int = None
 ) -> Dict[str, Any]:
     """Run complete multi-seed training and evaluation."""
+    global logger
+    if logger is None:
+        logger = setup_experiment_logging(config, "multi_seed_training")
 
     seeds = config.seeds[:num_seeds] if num_seeds else config.seeds
     logger.info(f"Running multi-seed experiment with {len(seeds)} seeds")
@@ -307,6 +306,7 @@ def print_summary(stats: Dict, seeds: List[int]):
 
 
 def main():
+    global logger
     parser = argparse.ArgumentParser(description='Multi-seed training for statistical validity')
     parser.add_argument('--seeds', type=int, default=None, help='Number of seeds to use')
     parser.add_argument('--timesteps', type=int, default=None, help='Training timesteps per seed')
@@ -316,6 +316,8 @@ def main():
     args = parser.parse_args()
 
     config = ExperimentConfig()
+    logger = setup_experiment_logging(config, "multi_seed_training")
+
     if args.timesteps:
         config.training_timesteps = args.timesteps
     if args.eval_episodes:

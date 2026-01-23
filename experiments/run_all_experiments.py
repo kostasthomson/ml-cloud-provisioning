@@ -30,23 +30,22 @@ import time
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from experiments.config import ExperimentConfig
+from experiments.config import ExperimentConfig, setup_experiment_logging
 
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(levelname)s - %(message)s'
-)
-logger = logging.getLogger(__name__)
+logger = None
 
 
 class ExperimentRunner:
     """Orchestrates all experiments and generates reports."""
 
     def __init__(self, config: ExperimentConfig):
+        global logger
         self.config = config
         self.results = {}
         self.start_time = None
         self.end_time = None
+        if logger is None:
+            logger = setup_experiment_logging(config, "run_all_experiments")
 
     def run_all(
         self,

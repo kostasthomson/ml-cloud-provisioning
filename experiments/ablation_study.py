@@ -26,13 +26,9 @@ from rl.agent import RLAgent
 from rl.trainer import PPOTrainer
 from rl.reward import RewardCalculator
 from rl.schemas import RLTrainingConfig
-from experiments.config import ExperimentConfig
+from experiments.config import ExperimentConfig, setup_experiment_logging
 
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(levelname)s - %(message)s'
-)
-logger = logging.getLogger(__name__)
+logger = None
 
 
 @dataclass
@@ -204,6 +200,9 @@ def run_ablation_study(
     ablation_configs: Optional[Dict[str, Dict]] = None
 ) -> Dict[str, Any]:
     """Run complete ablation study."""
+    global logger
+    if logger is None:
+        logger = setup_experiment_logging(config, "ablation_study")
 
     configs = ablation_configs or config.ablation_configs
     logger.info(f"Running ablation study with {len(configs)} configurations")
@@ -325,6 +324,7 @@ def print_ablation_summary(
 
 
 def main():
+    global logger
     parser = argparse.ArgumentParser(description='Ablation study')
     parser.add_argument('--configs', type=str, default=None,
                         help='Comma-separated config names to test')
@@ -335,6 +335,8 @@ def main():
     args = parser.parse_args()
 
     config = ExperimentConfig()
+    logger = setup_experiment_logging(config, "ablation_study")
+
     if args.timesteps:
         config.training_timesteps = args.timesteps
     if args.eval_episodes:

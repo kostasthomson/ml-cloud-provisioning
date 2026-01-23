@@ -26,13 +26,9 @@ from rl.agent import RLAgent
 from rl.trainer import PPOTrainer
 from rl.reward import RewardCalculator
 from rl.schemas import RLTrainingConfig
-from experiments.config import ExperimentConfig
+from experiments.config import ExperimentConfig, setup_experiment_logging
 
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(levelname)s - %(message)s'
-)
-logger = logging.getLogger(__name__)
+logger = None
 
 
 @dataclass
@@ -185,6 +181,9 @@ def run_pareto_analysis(
     energy_weights: List[float] = None
 ) -> Dict[str, Any]:
     """Run complete Pareto front analysis."""
+    global logger
+    if logger is None:
+        logger = setup_experiment_logging(config, "pareto_analysis")
 
     weights = energy_weights or config.pareto_energy_weights
     logger.info(f"Running Pareto analysis with energy weights: {weights}")
@@ -295,6 +294,7 @@ def print_pareto_summary(
 
 
 def main():
+    global logger
     parser = argparse.ArgumentParser(description='Pareto front analysis')
     parser.add_argument('--weights', type=str, default=None,
                         help='Comma-separated energy weights (e.g., 0.5,0.7,0.9)')
@@ -305,6 +305,8 @@ def main():
     args = parser.parse_args()
 
     config = ExperimentConfig()
+    logger = setup_experiment_logging(config, "pareto_analysis")
+
     if args.timesteps:
         config.training_timesteps = args.timesteps
     if args.eval_episodes:

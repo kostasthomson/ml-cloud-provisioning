@@ -18,8 +18,9 @@ import numpy as np
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
-logger = logging.getLogger(__name__)
+from experiments.config import ExperimentConfig, setup_experiment_logging
+
+logger = None
 
 try:
     import matplotlib.pyplot as plt
@@ -292,8 +293,13 @@ def plot_baseline_comparison(results: Dict, output_dir: Path):
     logger.info("Saved baseline comparison plot")
 
 
-def generate_all_plots(results_dir: Path):
+def generate_all_plots(results_dir: Path, config: ExperimentConfig = None):
     """Generate all plots from experiment results."""
+    global logger
+    if logger is None:
+        config = config or ExperimentConfig()
+        logger = setup_experiment_logging(config, "generate_plots")
+
     if not MATPLOTLIB_AVAILABLE:
         logger.error("matplotlib is required for plot generation")
         return
@@ -314,10 +320,14 @@ def generate_all_plots(results_dir: Path):
 
 
 def main():
+    global logger
     parser = argparse.ArgumentParser(description='Generate plots from experiment results')
     parser.add_argument('--results-dir', type=str, default='results/academic',
                         help='Results directory')
     args = parser.parse_args()
+
+    config = ExperimentConfig()
+    logger = setup_experiment_logging(config, "generate_plots")
 
     results_dir = Path(args.results_dir)
     if not results_dir.exists():
@@ -327,7 +337,7 @@ def main():
         logger.error(f"Results directory not found: {results_dir}")
         return
 
-    generate_all_plots(results_dir)
+    generate_all_plots(results_dir, config)
 
 
 if __name__ == "__main__":
