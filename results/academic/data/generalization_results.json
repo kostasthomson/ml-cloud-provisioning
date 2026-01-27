@@ -1,0 +1,114 @@
+{
+  "experiment": "generalization_test",
+  "timestamp": "2026-01-27T06:18:06.378733",
+  "status": "completed",
+  "config": {
+    "train_preset": "medium",
+    "test_presets": [
+      "small",
+      "medium",
+      "large",
+      "enterprise"
+    ],
+    "timesteps": 200000,
+    "evaluation_episodes": 50
+  },
+  "hw_type_counts": {
+    "medium": 3,
+    "small": 2,
+    "large": 4,
+    "enterprise": 6
+  },
+  "completed_presets": [
+    "small",
+    "medium",
+    "large",
+    "enterprise"
+  ],
+  "failed_presets": [],
+  "results": [
+    {
+      "train_preset": "medium",
+      "test_preset": "small",
+      "num_hw_types_train": 3,
+      "num_hw_types_test": 2,
+      "avg_energy_per_task": 0.0006769096977488884,
+      "acceptance_rate": 0.3532,
+      "sla_compliance_rate": 0.9252548131370328,
+      "avg_reward": 29.426680932450545,
+      "total_energy": 1.1954225262245368,
+      "total_accepted": 1766,
+      "total_tasks": 5000,
+      "is_same_config": false
+    },
+    {
+      "train_preset": "medium",
+      "test_preset": "medium",
+      "num_hw_types_train": 3,
+      "num_hw_types_test": 3,
+      "avg_energy_per_task": 0.0010588241992936266,
+      "acceptance_rate": 0.596,
+      "sla_compliance_rate": 0.9402684563758389,
+      "avg_reward": 69.44246689224603,
+      "total_energy": 3.155296113895007,
+      "total_accepted": 2980,
+      "total_tasks": 5000,
+      "is_same_config": true
+    },
+    {
+      "train_preset": "medium",
+      "test_preset": "large",
+      "num_hw_types_train": 3,
+      "num_hw_types_test": 4,
+      "avg_energy_per_task": 0.0011854190327857742,
+      "acceptance_rate": 0.7142,
+      "sla_compliance_rate": 0.9420330439652759,
+      "avg_reward": 88.60825928300208,
+      "total_energy": 4.233131366077999,
+      "total_accepted": 3571,
+      "total_tasks": 5000,
+      "is_same_config": false
+    },
+    {
+      "train_preset": "medium",
+      "test_preset": "enterprise",
+      "num_hw_types_train": 3,
+      "num_hw_types_test": 6,
+      "avg_energy_per_task": 0.0014727265460623416,
+      "acceptance_rate": 0.7806,
+      "sla_compliance_rate": 0.9385088393543428,
+      "avg_reward": 99.39980476884604,
+      "total_energy": 5.748051709281319,
+      "total_accepted": 3903,
+      "total_tasks": 5000,
+      "is_same_config": false
+    }
+  ],
+  "generalization_gaps": {
+    "small": {
+      "energy_gap_pct": -36.069680103602174,
+      "acceptance_gap_pct": -40.73825503355704,
+      "sla_gap_pct": -1.5967400732206296,
+      "reward_gap_pct": -57.62437273705733
+    },
+    "large": {
+      "energy_gap_pct": 11.956171154437417,
+      "acceptance_gap_pct": 19.832214765100666,
+      "sla_gap_pct": 0.18766848738480407,
+      "reward_gap_pct": 27.599526987564598
+    },
+    "enterprise": {
+      "energy_gap_pct": 39.09075246342515,
+      "acceptance_gap_pct": 30.973154362416107,
+      "sla_gap_pct": -0.18713985453455748,
+      "reward_gap_pct": 43.13979502353343
+    }
+  },
+  "average_gaps": {
+    "avg_energy_gap_pct": 4.992414504753463,
+    "avg_acceptance_gap_pct": 3.355704697986578,
+    "avg_sla_gap_pct": -0.532070480123461,
+    "avg_reward_gap_pct": 4.371649758013567
+  },
+  "model_path": "/home/anmak/ml-cloud-provisioning/results/academic/models/generalization/model_trained_on_medium.pth"
+}

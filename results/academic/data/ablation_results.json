@@ -1,0 +1,149 @@
+{
+  "experiment": "ablation_study",
+  "timestamp": "2026-01-27T02:42:46.094323",
+  "status": "completed",
+  "config": {
+    "ablation_configs": {
+      "full": {
+        "energy_weight": 0.8,
+        "sla_weight": 0.15,
+        "rejection_penalty": 0.3
+      },
+      "no_energy": {
+        "energy_weight": 0.0,
+        "sla_weight": 0.5,
+        "rejection_penalty": 0.3
+      },
+      "no_sla": {
+        "energy_weight": 0.8,
+        "sla_weight": 0.0,
+        "rejection_penalty": 0.3
+      },
+      "no_rejection_penalty": {
+        "energy_weight": 0.8,
+        "sla_weight": 0.15,
+        "rejection_penalty": 0.0
+      },
+      "energy_only": {
+        "energy_weight": 1.0,
+        "sla_weight": 0.0,
+        "rejection_penalty": 0.0
+      }
+    },
+    "timesteps": 200000,
+    "evaluation_episodes": 50,
+    "env_preset": "medium"
+  },
+  "completed_configs": [
+    "full",
+    "no_energy",
+    "no_sla",
+    "no_rejection_penalty",
+    "energy_only"
+  ],
+  "failed_configs": [],
+  "results": [
+    {
+      "config_name": "full",
+      "energy_weight": 0.8,
+      "sla_weight": 0.15,
+      "rejection_penalty": 0.3,
+      "avg_energy_per_task": 0.0009899661064018675,
+      "acceptance_rate": 0.5812,
+      "sla_compliance_rate": 0.9459738472126634,
+      "avg_reward": 67.08608268157268,
+      "total_energy": 2.8768415052038265,
+      "total_accepted": 2906,
+      "total_tasks": 5000,
+      "training_time_sec": 12839.402294,
+      "model_path": "/home/anmak/ml-cloud-provisioning/results/academic/models/ablation/model_ablation_full.pth"
+    },
+    {
+      "config_name": "no_energy",
+      "energy_weight": 0.0,
+      "sla_weight": 0.5,
+      "rejection_penalty": 0.3,
+      "avg_energy_per_task": 0.0010281163768237798,
+      "acceptance_rate": 0.5734,
+      "sla_compliance_rate": 0.9452389257063132,
+      "avg_reward": 65.7006605346241,
+      "total_energy": 2.9476096523537767,
+      "total_accepted": 2867,
+      "total_tasks": 5000,
+      "training_time_sec": 12897.619005,
+      "model_path": "/home/anmak/ml-cloud-provisioning/results/academic/models/ablation/model_ablation_no_energy.pth"
+    },
+    {
+      "config_name": "no_sla",
+      "energy_weight": 0.8,
+      "sla_weight": 0.0,
+      "rejection_penalty": 0.3,
+      "avg_energy_per_task": 0.0011006927013264304,
+      "acceptance_rate": 0.5892,
+      "sla_compliance_rate": 0.9341479972844535,
+      "avg_reward": 68.31297231809619,
+      "total_energy": 3.242640698107664,
+      "total_accepted": 2946,
+      "total_tasks": 5000,
+      "training_time_sec": 12899.881269,
+      "model_path": "/home/anmak/ml-cloud-provisioning/results/academic/models/ablation/model_ablation_no_sla.pth"
+    },
+    {
+      "config_name": "no_rejection_penalty",
+      "energy_weight": 0.8,
+      "sla_weight": 0.15,
+      "rejection_penalty": 0.0,
+      "avg_energy_per_task": 0.0010794347658012382,
+      "acceptance_rate": 0.5874,
+      "sla_compliance_rate": 0.9404153898535921,
+      "avg_reward": 67.99014755894954,
+      "total_energy": 3.1702999071582365,
+      "total_accepted": 2937,
+      "total_tasks": 5000,
+      "training_time_sec": 12913.383747,
+      "model_path": "/home/anmak/ml-cloud-provisioning/results/academic/models/ablation/model_ablation_no_rejection_penalty.pth"
+    },
+    {
+      "config_name": "energy_only",
+      "energy_weight": 1.0,
+      "sla_weight": 0.0,
+      "rejection_penalty": 0.0,
+      "avg_energy_per_task": 0.0010122750677419071,
+      "acceptance_rate": 0.569,
+      "sla_compliance_rate": 0.9486818980667838,
+      "avg_reward": 65.00998234932936,
+      "total_energy": 2.8799225677257256,
+      "total_accepted": 2845,
+      "total_tasks": 5000,
+      "training_time_sec": 12862.062206,
+      "model_path": "/home/anmak/ml-cloud-provisioning/results/academic/models/ablation/model_ablation_energy_only.pth"
+    }
+  ],
+  "impact_analysis": {
+    "no_energy": {
+      "energy_change_pct": 3.8536946038055144,
+      "acceptance_change_pct": -1.3420509291121865,
+      "sla_change_pct": -0.07768941060217513,
+      "reward_change_pct": -2.0651409227820676
+    },
+    "no_sla": {
+      "energy_change_pct": 11.184887463168819,
+      "acceptance_change_pct": 1.3764624913970913,
+      "sla_change_pct": -1.2501244049246258,
+      "reward_change_pct": 1.8288288531423127
+    },
+    "no_rejection_penalty": {
+      "energy_change_pct": 9.037547732270719,
+      "acceptance_change_pct": 1.066758430832757,
+      "sla_change_pct": -0.5875910180233295,
+      "reward_change_pct": 1.3476191204486563
+    },
+    "energy_only": {
+      "energy_change_pct": 2.2535075893783723,
+      "acceptance_change_pct": -2.099105299380609,
+      "sla_change_pct": 0.2862712179728589,
+      "reward_change_pct": -3.094681116048502
+    }
+  },
+  "baseline_config": "full"
+}

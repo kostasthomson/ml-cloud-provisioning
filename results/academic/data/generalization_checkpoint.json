@@ -1,0 +1,71 @@
+{
+  "experiment": "generalization_test",
+  "timestamp": "2026-01-27T06:18:06.378000",
+  "status": "in_progress",
+  "model_path": "/home/anmak/ml-cloud-provisioning/results/academic/models/generalization/model_trained_on_medium.pth",
+  "completed_presets": [
+    "small",
+    "medium",
+    "large",
+    "enterprise"
+  ],
+  "failed_presets": [],
+  "results": [
+    {
+      "train_preset": "medium",
+      "test_preset": "small",
+      "num_hw_types_train": 3,
+      "num_hw_types_test": 2,
+      "avg_energy_per_task": 0.0006769096977488884,
+      "acceptance_rate": 0.3532,
+      "sla_compliance_rate": 0.9252548131370328,
+      "avg_reward": 29.426680932450545,
+      "total_energy": 1.1954225262245368,
+      "total_accepted": 1766,
+      "total_tasks": 5000,
+      "is_same_config": false
+    },
+    {
+      "train_preset": "medium",
+      "test_preset": "medium",
+      "num_hw_types_train": 3,
+      "num_hw_types_test": 3,
+      "avg_energy_per_task": 0.0010588241992936266,
+      "acceptance_rate": 0.596,
+      "sla_compliance_rate": 0.9402684563758389,
+      "avg_reward": 69.44246689224603,
+      "total_energy": 3.155296113895007,
+      "total_accepted": 2980,
+      "total_tasks": 5000,
+      "is_same_config": true
+    },
+    {
+      "train_preset": "medium",
+      "test_preset": "large",
+      "num_hw_types_train": 3,
+      "num_hw_types_test": 4,
+      "avg_energy_per_task": 0.0011854190327857742,
+      "acceptance_rate": 0.7142,
+      "sla_compliance_rate": 0.9420330439652759,
+      "avg_reward": 88.60825928300208,
+      "total_energy": 4.233131366077999,
+      "total_accepted": 3571,
+      "total_tasks": 5000,
+      "is_same_config": false
+    },
+    {
+      "train_preset": "medium",
+      "test_preset": "enterprise",
+      "num_hw_types_train": 3,
+      "num_hw_types_test": 6,
+      "avg_energy_per_task": 0.0014727265460623416,
+      "acceptance_rate": 0.7806,
+      "sla_compliance_rate": 0.9385088393543428,
+      "avg_reward": 99.39980476884604,
+      "total_energy": 5.748051709281319,
+      "total_accepted": 3903,
+      "total_tasks": 5000,
+      "is_same_config": false
+    }
+  ]
+}

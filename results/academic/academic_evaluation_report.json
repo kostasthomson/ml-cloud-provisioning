@@ -1,0 +1,743 @@
+{
+  "experiment_suite": "RL Cloud Provisioning Academic Evaluation",
+  "timestamp_start": "2026-01-23T23:08:15.096164",
+  "timestamp_end": "2026-01-27T06:23:58.584028",
+  "duration_sec": 285343.487864,
+  "configuration": {
+    "training_timesteps": 200000,
+    "evaluation_episodes": 50,
+    "num_seeds": 10,
+    "env_preset": "medium",
+    "exec_time_noise": 0.15,
+    "energy_noise": 0.1
+  },
+  "experiments": {
+    "multi_seed": {
+      "experiment": "multi_seed_training",
+      "timestamp": "2026-01-25T11:13:17.446280",
+      "status": "completed",
+      "config": {
+        "seeds": [
+          42,
+          123,
+          456,
+          789,
+          1011,
+          2022,
+          3033,
+          4044,
+          5055,
+          6066
+        ],
+        "timesteps": 200000,
+        "evaluation_episodes": 50,
+        "env_preset": "medium",
+        "exec_time_noise": 0.15,
+        "energy_noise": 0.1
+      },
+      "completed_seeds": [
+        42,
+        123,
+        456,
+        789,
+        1011,
+        2022,
+        3033,
+        4044,
+        5055,
+        6066
+      ],
+      "failed_seeds": [],
+      "training_results": [
+        {
+          "seed": 42,
+          "final_reward": 1073.635865446246,
+          "episodes_completed": 97,
+          "training_time_sec": 12804.073314,
+          "policy_loss_final": -0.001222836869904183,
+          "value_loss_final": 8.887189692138206,
+          "model_path": "/home/anmak/ml-cloud-provisioning/results/academic/models/multi_seed/model_seed_42.pth"
+        },
+        {
+          "seed": 123,
+          "final_reward": 1083.2935473198052,
+          "episodes_completed": 97,
+          "training_time_sec": 12796.632247,
+          "policy_loss_final": -0.00045176629236309623,
+          "value_loss_final": 9.713227405654532,
+          "model_path": "/home/anmak/ml-cloud-provisioning/results/academic/models/multi_seed/model_seed_123.pth"
+        },
+        {
+          "seed": 456,
+          "final_reward": 1080.7903282829802,
+          "episodes_completed": 97,
+          "training_time_sec": 12797.120246,
+          "policy_loss_final": -0.00021376468358756117,
+          "value_loss_final": 10.14717699094897,
+          "model_path": "/home/anmak/ml-cloud-provisioning/results/academic/models/multi_seed/model_seed_456.pth"
+        },
+        {
+          "seed": 789,
+          "final_reward": 1064.7047140150387,
+          "episodes_completed": 97,
+          "training_time_sec": 12834.38191,
+          "policy_loss_final": -0.001201298332298826,
+          "value_loss_final": 9.270822756425257,
+          "model_path": "/home/anmak/ml-cloud-provisioning/results/academic/models/multi_seed/model_seed_789.pth"
+        },
+        {
+          "seed": 1011,
+          "final_reward": 1073.5780826325595,
+          "episodes_completed": 97,
+          "training_time_sec": 14298.370737,
+          "policy_loss_final": -0.0010307097065404898,
+          "value_loss_final": 10.396687107582887,
+          "model_path": "/home/anmak/ml-cloud-provisioning/results/academic/models/multi_seed/model_seed_1011.pth"
+        },
+        {
+          "seed": 2022,
+          "final_reward": 1059.282812738212,
+          "episodes_completed": 97,
+          "training_time_sec": 12832.671745,
+          "policy_loss_final": -0.001316066386292126,
+          "value_loss_final": 9.268598396341716,
+          "model_path": "/home/anmak/ml-cloud-provisioning/results/academic/models/multi_seed/model_seed_2022.pth"
+        },
+        {
+          "seed": 3033,
+          "final_reward": 1070.7671456960925,
+          "episodes_completed": 97,
+          "training_time_sec": 13045.155123,
+          "policy_loss_final": -0.0005957755805433235,
+          "value_loss_final": 10.071814181737247,
+          "model_path": "/home/anmak/ml-cloud-provisioning/results/academic/models/multi_seed/model_seed_3033.pth"
+        },
+        {
+          "seed": 4044,
+          "final_reward": 1068.4454103268681,
+          "episodes_completed": 97,
+          "training_time_sec": 12800.268223,
+          "policy_loss_final": -0.0006738614906619964,
+          "value_loss_final": 9.907827070759875,
+          "model_path": "/home/anmak/ml-cloud-provisioning/results/academic/models/multi_seed/model_seed_4044.pth"
+        },
+        {
+          "seed": 5055,
+          "final_reward": 1067.244613934029,
+          "episodes_completed": 97,
+          "training_time_sec": 12781.721081,
+          "policy_loss_final": -0.000509566063090114,
+          "value_loss_final": 11.143947201782748,
+          "model_path": "/home/anmak/ml-cloud-provisioning/results/academic/models/multi_seed/model_seed_5055.pth"
+        },
+        {
+          "seed": 6066,
+          "final_reward": 1067.9896678125583,
+          "episodes_completed": 97,
+          "training_time_sec": 12777.56477,
+          "policy_loss_final": -0.0008381971408982194,
+          "value_loss_final": 10.783295954810011,
+          "model_path": "/home/anmak/ml-cloud-provisioning/results/academic/models/multi_seed/model_seed_6066.pth"
+        }
+      ],
+      "evaluation_results": [
+        {
+          "seed": 42,
+          "total_energy_kwh": 3.0413161860957656,
+          "energy_per_task": 0.0010701323666769055,
+          "acceptance_rate": 0.5684,
+          "sla_compliance_rate": 0.9345531315974666,
+          "avg_episode_reward": 64.92009387386119
+        },
+        {
+          "seed": 123,
+          "total_energy_kwh": 3.1281288666277565,
+          "energy_per_task": 0.0010600233367088297,
+          "acceptance_rate": 0.5902,
+          "sla_compliance_rate": 0.9434090138935954,
+          "avg_episode_reward": 68.4714265275189
+        },
+        {
+          "seed": 456,
+          "total_energy_kwh": 3.07962072287765,
+          "energy_per_task": 0.0011154004791298986,
+          "acceptance_rate": 0.5522,
+          "sla_compliance_rate": 0.9344440420137632,
+          "avg_episode_reward": 62.161434773041634
+        },
+        {
+          "seed": 789,
+          "total_energy_kwh": 3.064269474280517,
+          "energy_per_task": 0.001064352023022062,
+          "acceptance_rate": 0.5758,
+          "sla_compliance_rate": 0.9385203195554012,
+          "avg_episode_reward": 66.36858727458443
+        },
+        {
+          "seed": 1011,
+          "total_energy_kwh": 3.197698626031474,
+          "energy_per_task": 0.0011227874389155457,
+          "acceptance_rate": 0.5696,
+          "sla_compliance_rate": 0.9399578651685393,
+          "avg_episode_reward": 65.0983899671875
+        },
+        {
+          "seed": 2022,
+          "total_energy_kwh": 2.8908355080937795,
+          "energy_per_task": 0.0010107816461866362,
+          "acceptance_rate": 0.572,
+          "sla_compliance_rate": 0.9437062937062937,
+          "avg_episode_reward": 65.40937759187221
+        },
+        {
+          "seed": 3033,
+          "total_energy_kwh": 3.00548583733582,
+          "energy_per_task": 0.0010768490997261984,
+          "acceptance_rate": 0.5582,
+          "sla_compliance_rate": 0.9437477606592619,
+          "avg_episode_reward": 63.16878954449441
+        },
+        {
+          "seed": 4044,
+          "total_energy_kwh": 2.9747970314524514,
+          "energy_per_task": 0.001034352236249114,
+          "acceptance_rate": 0.5752,
+          "sla_compliance_rate": 0.9349791376912379,
+          "avg_episode_reward": 66.08755316050933
+        },
+        {
+          "seed": 5055,
+          "total_energy_kwh": 3.305521764487377,
+          "energy_per_task": 0.0011549691699816133,
+          "acceptance_rate": 0.5724,
+          "sla_compliance_rate": 0.9255765199161425,
+          "avg_episode_reward": 65.2861936210138
+        },
+        {
+          "seed": 6066,
+          "total_energy_kwh": 2.9659064932037427,
+          "energy_per_task": 0.0010410342201487338,
+          "acceptance_rate": 0.5698,
+          "sla_compliance_rate": 0.9392769392769392,
+          "avg_episode_reward": 65.37789325433413
+        }
+      ],
+      "statistics": {
+        "n_seeds": 10,
+        "energy_per_task": {
+          "mean": 0.0010750682016745536,
+          "std": 4.195898522518465e-05,
+          "ci_95": [
+            0.001043428928684255,
+            0.001106707474664852
+          ],
+          "min": 0.0010107816461866362,
+          "max": 0.0011549691699816133
+        },
+        "acceptance_rate": {
+          "mean": 0.57038,
+          "std": 0.009674068430603519,
+          "ci_95": [
+            0.5630852456021034,
+            0.5776747543978966
+          ]
+        },
+        "sla_compliance_rate": {
+          "mean": 0.9378171023478641,
+          "std": 0.005368893778888308,
+          "ci_95": [
+            0.9337686751751257,
+            0.9418655295206024
+          ]
+        },
+        "avg_reward": {
+          "mean": 65.23497395884176,
+          "std": 1.6239959204230694,
+          "ci_95": [
+            64.01039595759507,
+            66.45955196008846
+          ]
+        }
+      },
+      "duration_sec": 129902.35123467445
+    },
+    "pareto": {
+      "experiment": "pareto_analysis",
+      "timestamp": "2026-01-26T08:48:08.523916",
+      "status": "completed",
+      "config": {
+        "energy_weights": [
+          0.5,
+          0.6,
+          0.7,
+          0.8,
+          0.9,
+          0.95
+        ],
+        "timesteps": 200000,
+        "evaluation_episodes": 50,
+        "env_preset": "medium"
+      },
+      "completed_weights": [
+        0.5,
+        0.6,
+        0.7,
+        0.8,
+        0.9,
+        0.95
+      ],
+      "failed_weights": [],
+      "all_points": [
+        {
+          "energy_weight": 0.5,
+          "avg_energy_per_task": 0.0010529834684544527,
+          "acceptance_rate": 0.5928,
+          "sla_compliance_rate": 0.9456815114709851,
+          "avg_reward": 68.88887628998336,
+          "total_energy": 3.1210430004989975,
+          "total_accepted": 2964,
+          "total_tasks": 5000,
+          "model_path": "/home/anmak/ml-cloud-provisioning/results/academic/models/pareto/model_energy_weight_0.50.pth"
+        },
+        {
+          "energy_weight": 0.6,
+          "avg_energy_per_task": 0.0011077729554096302,
+          "acceptance_rate": 0.5952,
+          "sla_compliance_rate": 0.9351478494623656,
+          "avg_reward": 69.26223042082648,
+          "total_energy": 3.2967323152990593,
+          "total_accepted": 2976,
+          "total_tasks": 5000,
+          "model_path": "/home/anmak/ml-cloud-provisioning/results/academic/models/pareto/model_energy_weight_0.60.pth"
+        },
+        {
+          "energy_weight": 0.7,
+          "avg_energy_per_task": 0.0009373138948738922,
+          "acceptance_rate": 0.5778,
+          "sla_compliance_rate": 0.943232952578747,
+          "avg_reward": 66.52836896879374,
+          "total_energy": 2.7078998422906744,
+          "total_accepted": 2889,
+          "total_tasks": 5000,
+          "model_path": "/home/anmak/ml-cloud-provisioning/results/academic/models/pareto/model_energy_weight_0.70.pth"
+        },
+        {
+          "energy_weight": 0.8,
+          "avg_energy_per_task": 0.0011492967049384335,
+          "acceptance_rate": 0.584,
+          "sla_compliance_rate": 0.9294520547945205,
+          "avg_reward": 67.28964864519702,
+          "total_energy": 3.355946378420226,
+          "total_accepted": 2920,
+          "total_tasks": 5000,
+          "model_path": "/home/anmak/ml-cloud-provisioning/results/academic/models/pareto/model_energy_weight_0.80.pth"
+        },
+        {
+          "energy_weight": 0.9,
+          "avg_energy_per_task": 0.0010290034904133927,
+          "acceptance_rate": 0.5734,
+          "sla_compliance_rate": 0.9476805022671783,
+          "avg_reward": 65.75053862285414,
+          "total_energy": 2.950153007015197,
+          "total_accepted": 2867,
+          "total_tasks": 5000,
+          "model_path": "/home/anmak/ml-cloud-provisioning/results/academic/models/pareto/model_energy_weight_0.90.pth"
+        },
+        {
+          "energy_weight": 0.95,
+          "avg_energy_per_task": 0.0010485401282764577,
+          "acceptance_rate": 0.5838,
+          "sla_compliance_rate": 0.9383350462487153,
+          "avg_reward": 67.35150826583293,
+          "total_energy": 3.0606886344389803,
+          "total_accepted": 2919,
+          "total_tasks": 5000,
+          "model_path": "/home/anmak/ml-cloud-provisioning/results/academic/models/pareto/model_energy_weight_0.95.pth"
+        }
+      ],
+      "pareto_frontier": [
+        {
+          "energy_weight": 0.7,
+          "avg_energy_per_task": 0.0009373138948738922,
+          "acceptance_rate": 0.5778,
+          "sla_compliance_rate": 0.943232952578747,
+          "avg_reward": 66.52836896879374,
+          "total_energy": 2.7078998422906744,
+          "total_accepted": 2889,
+          "total_tasks": 5000,
+          "model_path": "/home/anmak/ml-cloud-provisioning/results/academic/models/pareto/model_energy_weight_0.70.pth"
+        },
+        {
+          "energy_weight": 0.95,
+          "avg_energy_per_task": 0.0010485401282764577,
+          "acceptance_rate": 0.5838,
+          "sla_compliance_rate": 0.9383350462487153,
+          "avg_reward": 67.35150826583293,
+          "total_energy": 3.0606886344389803,
+          "total_accepted": 2919,
+          "total_tasks": 5000,
+          "model_path": "/home/anmak/ml-cloud-provisioning/results/academic/models/pareto/model_energy_weight_0.95.pth"
+        },
+        {
+          "energy_weight": 0.5,
+          "avg_energy_per_task": 0.0010529834684544527,
+          "acceptance_rate": 0.5928,
+          "sla_compliance_rate": 0.9456815114709851,
+          "avg_reward": 68.88887628998336,
+          "total_energy": 3.1210430004989975,
+          "total_accepted": 2964,
+          "total_tasks": 5000,
+          "model_path": "/home/anmak/ml-cloud-provisioning/results/academic/models/pareto/model_energy_weight_0.50.pth"
+        },
+        {
+          "energy_weight": 0.6,
+          "avg_energy_per_task": 0.0011077729554096302,
+          "acceptance_rate": 0.5952,
+          "sla_compliance_rate": 0.9351478494623656,
+          "avg_reward": 69.26223042082648,
+          "total_energy": 3.2967323152990593,
+          "total_accepted": 2976,
+          "total_tasks": 5000,
+          "model_path": "/home/anmak/ml-cloud-provisioning/results/academic/models/pareto/model_energy_weight_0.60.pth"
+        }
+      ],
+      "summary": {
+        "num_points": 6,
+        "num_pareto_optimal": 4,
+        "energy_range": {
+          "min": 0.0009373138948738922,
+          "max": 0.0011492967049384335
+        },
+        "acceptance_range": {
+          "min": 0.5734,
+          "max": 0.5952
+        }
+      },
+      "duration_sec": 77691.07662034035
+    },
+    "ablation": {
+      "experiment": "ablation_study",
+      "timestamp": "2026-01-27T02:42:46.094323",
+      "status": "completed",
+      "config": {
+        "ablation_configs": {
+          "full": {
+            "energy_weight": 0.8,
+            "sla_weight": 0.15,
+            "rejection_penalty": 0.3
+          },
+          "no_energy": {
+            "energy_weight": 0.0,
+            "sla_weight": 0.5,
+            "rejection_penalty": 0.3
+          },
+          "no_sla": {
+            "energy_weight": 0.8,
+            "sla_weight": 0.0,
+            "rejection_penalty": 0.3
+          },
+          "no_rejection_penalty": {
+            "energy_weight": 0.8,
+            "sla_weight": 0.15,
+            "rejection_penalty": 0.0
+          },
+          "energy_only": {
+            "energy_weight": 1.0,
+            "sla_weight": 0.0,
+            "rejection_penalty": 0.0
+          }
+        },
+        "timesteps": 200000,
+        "evaluation_episodes": 50,
+        "env_preset": "medium"
+      },
+      "completed_configs": [
+        "full",
+        "no_energy",
+        "no_sla",
+        "no_rejection_penalty",
+        "energy_only"
+      ],
+      "failed_configs": [],
+      "results": [
+        {
+          "config_name": "full",
+          "energy_weight": 0.8,
+          "sla_weight": 0.15,
+          "rejection_penalty": 0.3,
+          "avg_energy_per_task": 0.0009899661064018675,
+          "acceptance_rate": 0.5812,
+          "sla_compliance_rate": 0.9459738472126634,
+          "avg_reward": 67.08608268157268,
+          "total_energy": 2.8768415052038265,
+          "total_accepted": 2906,
+          "total_tasks": 5000,
+          "training_time_sec": 12839.402294,
+          "model_path": "/home/anmak/ml-cloud-provisioning/results/academic/models/ablation/model_ablation_full.pth"
+        },
+        {
+          "config_name": "no_energy",
+          "energy_weight": 0.0,
+          "sla_weight": 0.5,
+          "rejection_penalty": 0.3,
+          "avg_energy_per_task": 0.0010281163768237798,
+          "acceptance_rate": 0.5734,
+          "sla_compliance_rate": 0.9452389257063132,
+          "avg_reward": 65.7006605346241,
+          "total_energy": 2.9476096523537767,
+          "total_accepted": 2867,
+          "total_tasks": 5000,
+          "training_time_sec": 12897.619005,
+          "model_path": "/home/anmak/ml-cloud-provisioning/results/academic/models/ablation/model_ablation_no_energy.pth"
+        },
+        {
+          "config_name": "no_sla",
+          "energy_weight": 0.8,
+          "sla_weight": 0.0,
+          "rejection_penalty": 0.3,
+          "avg_energy_per_task": 0.0011006927013264304,
+          "acceptance_rate": 0.5892,
+          "sla_compliance_rate": 0.9341479972844535,
+          "avg_reward": 68.31297231809619,
+          "total_energy": 3.242640698107664,
+          "total_accepted": 2946,
+          "total_tasks": 5000,
+          "training_time_sec": 12899.881269,
+          "model_path": "/home/anmak/ml-cloud-provisioning/results/academic/models/ablation/model_ablation_no_sla.pth"
+        },
+        {
+          "config_name": "no_rejection_penalty",
+          "energy_weight": 0.8,
+          "sla_weight": 0.15,
+          "rejection_penalty": 0.0,
+          "avg_energy_per_task": 0.0010794347658012382,
+          "acceptance_rate": 0.5874,
+          "sla_compliance_rate": 0.9404153898535921,
+          "avg_reward": 67.99014755894954,
+          "total_energy": 3.1702999071582365,
+          "total_accepted": 2937,
+          "total_tasks": 5000,
+          "training_time_sec": 12913.383747,
+          "model_path": "/home/anmak/ml-cloud-provisioning/results/academic/models/ablation/model_ablation_no_rejection_penalty.pth"
+        },
+        {
+          "config_name": "energy_only",
+          "energy_weight": 1.0,
+          "sla_weight": 0.0,
+          "rejection_penalty": 0.0,
+          "avg_energy_per_task": 0.0010122750677419071,
+          "acceptance_rate": 0.569,
+          "sla_compliance_rate": 0.9486818980667838,
+          "avg_reward": 65.00998234932936,
+          "total_energy": 2.8799225677257256,
+          "total_accepted": 2845,
+          "total_tasks": 5000,
+          "training_time_sec": 12862.062206,
+          "model_path": "/home/anmak/ml-cloud-provisioning/results/academic/models/ablation/model_ablation_energy_only.pth"
+        }
+      ],
+      "impact_analysis": {
+        "no_energy": {
+          "energy_change_pct": 3.8536946038055144,
+          "acceptance_change_pct": -1.3420509291121865,
+          "sla_change_pct": -0.07768941060217513,
+          "reward_change_pct": -2.0651409227820676
+        },
+        "no_sla": {
+          "energy_change_pct": 11.184887463168819,
+          "acceptance_change_pct": 1.3764624913970913,
+          "sla_change_pct": -1.2501244049246258,
+          "reward_change_pct": 1.8288288531423127
+        },
+        "no_rejection_penalty": {
+          "energy_change_pct": 9.037547732270719,
+          "acceptance_change_pct": 1.066758430832757,
+          "sla_change_pct": -0.5875910180233295,
+          "reward_change_pct": 1.3476191204486563
+        },
+        "energy_only": {
+          "energy_change_pct": 2.2535075893783723,
+          "acceptance_change_pct": -2.099105299380609,
+          "sla_change_pct": 0.2862712179728589,
+          "reward_change_pct": -3.094681116048502
+        }
+      },
+      "baseline_config": "full",
+      "duration_sec": 64477.56935596466
+    },
+    "generalization": {
+      "experiment": "generalization_test",
+      "timestamp": "2026-01-27T06:18:06.378733",
+      "status": "completed",
+      "config": {
+        "train_preset": "medium",
+        "test_presets": [
+          "small",
+          "medium",
+          "large",
+          "enterprise"
+        ],
+        "timesteps": 200000,
+        "evaluation_episodes": 50
+      },
+      "hw_type_counts": {
+        "medium": 3,
+        "small": 2,
+        "large": 4,
+        "enterprise": 6
+      },
+      "completed_presets": [
+        "small",
+        "medium",
+        "large",
+        "enterprise"
+      ],
+      "failed_presets": [],
+      "results": [
+        {
+          "train_preset": "medium",
+          "test_preset": "small",
+          "num_hw_types_train": 3,
+          "num_hw_types_test": 2,
+          "avg_energy_per_task": 0.0006769096977488884,
+          "acceptance_rate": 0.3532,
+          "sla_compliance_rate": 0.9252548131370328,
+          "avg_reward": 29.426680932450545,
+          "total_energy": 1.1954225262245368,
+          "total_accepted": 1766,
+          "total_tasks": 5000,
+          "is_same_config": false
+        },
+        {
+          "train_preset": "medium",
+          "test_preset": "medium",
+          "num_hw_types_train": 3,
+          "num_hw_types_test": 3,
+          "avg_energy_per_task": 0.0010588241992936266,
+          "acceptance_rate": 0.596,
+          "sla_compliance_rate": 0.9402684563758389,
+          "avg_reward": 69.44246689224603,
+          "total_energy": 3.155296113895007,
+          "total_accepted": 2980,
+          "total_tasks": 5000,
+          "is_same_config": true
+        },
+        {
+          "train_preset": "medium",
+          "test_preset": "large",
+          "num_hw_types_train": 3,
+          "num_hw_types_test": 4,
+          "avg_energy_per_task": 0.0011854190327857742,
+          "acceptance_rate": 0.7142,
+          "sla_compliance_rate": 0.9420330439652759,
+          "avg_reward": 88.60825928300208,
+          "total_energy": 4.233131366077999,
+          "total_accepted": 3571,
+          "total_tasks": 5000,
+          "is_same_config": false
+        },
+        {
+          "train_preset": "medium",
+          "test_preset": "enterprise",
+          "num_hw_types_train": 3,
+          "num_hw_types_test": 6,
+          "avg_energy_per_task": 0.0014727265460623416,
+          "acceptance_rate": 0.7806,
+          "sla_compliance_rate": 0.9385088393543428,
+          "avg_reward": 99.39980476884604,
+          "total_energy": 5.748051709281319,
+          "total_accepted": 3903,
+          "total_tasks": 5000,
+          "is_same_config": false
+        }
+      ],
+      "generalization_gaps": {
+        "small": {
+          "energy_gap_pct": -36.069680103602174,
+          "acceptance_gap_pct": -40.73825503355704,
+          "sla_gap_pct": -1.5967400732206296,
+          "reward_gap_pct": -57.62437273705733
+        },
+        "large": {
+          "energy_gap_pct": 11.956171154437417,
+          "acceptance_gap_pct": 19.832214765100666,
+          "sla_gap_pct": 0.18766848738480407,
+          "reward_gap_pct": 27.599526987564598
+        },
+        "enterprise": {
+          "energy_gap_pct": 39.09075246342515,
+          "acceptance_gap_pct": 30.973154362416107,
+          "sla_gap_pct": -0.18713985453455748,
+          "reward_gap_pct": 43.13979502353343
+        }
+      },
+      "average_gaps": {
+        "avg_energy_gap_pct": 4.992414504753463,
+        "avg_acceptance_gap_pct": 3.355704697986578,
+        "avg_sla_gap_pct": -0.532070480123461,
+        "avg_reward_gap_pct": 4.371649758013567
+      },
+      "model_path": "/home/anmak/ml-cloud-provisioning/results/academic/models/generalization/model_trained_on_medium.pth",
+      "duration_sec": 12920.282919883728
+    },
+    "baseline_comparison": {
+      "ppo": {
+        "total_energy_kwh": 51.06167140610776,
+        "acceptance_rate": 0.5095703125,
+        "sla_compliance_rate": 0.9340360291299349,
+        "efficiency_index": 0.000978567869032345
+      },
+      "scoring": {
+        "total_energy_kwh": 48.00057312213943,
+        "acceptance_rate": 0.50150390625,
+        "sla_compliance_rate": 0.9382521322584414,
+        "efficiency_index": 0.0009346997920734398
+      },
+      "random": {
+        "total_energy_kwh": 43.18027717702209,
+        "acceptance_rate": 0.39986328125,
+        "sla_compliance_rate": 0.9354515703609632,
+        "efficiency_index": 0.0010545664332785153
+      },
+      "statistical_analysis": {
+        "energy": {
+          "t_statistic": 4.5881617299383715,
+          "p_value": 1.38144992880213e-05,
+          "cohens_d": 0.9176323459876743,
+          "ppo_mean": 1.0212334281221636,
+          "ppo_std": 0.07262505326706956,
+          "scoring_mean": 0.960011462442795,
+          "scoring_std": 0.05873630651602292
+        },
+        "sla_compliance": {
+          "t_statistic": -2.7077413166621276,
+          "p_value": 0.008005398944127318,
+          "cohens_d": -0.5415482633324256,
+          "ppo_mean": 0.9339917807891709,
+          "ppo_std": 0.007243596846417707,
+          "scoring_mean": 0.938155680336457,
+          "scoring_std": 0.007962618756710829
+        }
+      },
+      "duration_sec": 352.2003712654114
+    }
+  },
+  "summary": {
+    "multi_seed": {
+      "energy_per_task_mean": 0.0010750682016745536,
+      "energy_per_task_std": 4.195898522518465e-05,
+      "acceptance_rate_mean": 0.57038,
+      "sla_compliance_mean": 0.9378171023478641
+    },
+    "generalization": {
+      "avg_energy_gap_pct": 4.992414504753463,
+      "avg_acceptance_gap_pct": 3.355704697986578,
+      "generalizes_well": "True"
+    },
+    "vs_baseline": {
+      "ppo_energy": 51.06167140610776,
+      "scoring_energy": 48.00057312213943,
+      "energy_improvement_pct": -6.377211947405803
+    }
+  }
+}
