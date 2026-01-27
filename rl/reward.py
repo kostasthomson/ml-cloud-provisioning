@@ -26,9 +26,9 @@ class RewardCalculator:
         sla_weight: float = 0.15,
         rejection_penalty: float = 0.3,
         normalize_energy: bool = True,
-        energy_baseline: float = 0.005,
-        energy_excellent_threshold: float = 0.002,
-        energy_poor_threshold: float = 0.01
+        energy_baseline: float = 0.05,
+        energy_excellent_threshold: float = 0.03,
+        energy_poor_threshold: float = 0.08
     ):
         self.energy_weight = energy_weight
         self.sla_weight = sla_weight
@@ -71,6 +71,13 @@ class RewardCalculator:
             reward += 0.3
         elif energy > self.energy_poor_threshold:
             reward -= 0.2
+
+        if self._running_energy_count > 10:
+            running_mean = self.get_running_mean()
+            if energy < running_mean * 0.8:
+                reward += 0.15
+            elif energy > running_mean * 1.2:
+                reward -= 0.1
 
         if outcome.deadline_met is not None:
             sla_reward = self._compute_sla_reward(outcome)

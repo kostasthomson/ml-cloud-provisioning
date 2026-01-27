@@ -141,7 +141,7 @@ rl/
 
 ## State Space
 
-The state is encoded as an 81-dimensional normalized vector:
+The state is encoded as a normalized vector with dimensions depending on the number of HW types:
 
 ### Task Features (12 dimensions)
 | Index | Feature | Normalization |
@@ -154,10 +154,13 @@ The state is encoded as an 81-dimensional normalized vector:
 | 5 | log10(instructions) | / 15 |
 | 6 | requires_accelerator | boolean |
 | 7 | accelerator_rho | [0, 1] |
-| 8-11 | compatible_hw_types | one-hot [4] |
+| 8 | num_compatible_hw_types | / 10 |
+| 9 | has_deadline | boolean |
+| 10 | deadline (if present) | / 3600 |
+| 11 | resource_intensity | normalized composite |
 
-### Hardware Type Features (64 dimensions = 4 types × 16 features)
-For each HW type (1-4):
+### Hardware Type Features (N × 16 dimensions, where N = number of HW types)
+For each HW type:
 | Index | Feature | Normalization |
 |-------|---------|---------------|
 | 0 | utilization_cpu | [0, 1] |
@@ -188,22 +191,21 @@ For each HW type (1-4):
 
 ## Action Space
 
-Discrete action space with 5 actions:
+Infrastructure-agnostic discrete action space:
 
-| Action ID | Name | Description |
-|-----------|------|-------------|
-| 0 | ALLOCATE_CPU | Allocate to HW Type 1 (CPU-only) |
-| 1 | ALLOCATE_GPU | Allocate to HW Type 2 (GPU) |
-| 2 | ALLOCATE_DFE | Allocate to HW Type 3 (DFE) |
-| 3 | ALLOCATE_MIC | Allocate to HW Type 4 (MIC) |
-| 4 | REJECT | Reject the task |
+| Action | Description |
+|--------|-------------|
+| hw_type_id | Allocate to specified HW type (e.g., 1, 2, 3...) |
+| -1 | Reject the task |
+
+The action space size is N+1 where N = number of hardware types in the environment. Actions directly map to hardware type IDs, not fixed indices.
 
 ### Action Masking
 
 Invalid actions are masked based on:
-- Task compatibility with HW type
+- Task compatibility with HW type (`compatible_hw_types` field)
 - Resource availability (CPU, memory, accelerators)
-- Reject action is always valid
+- Reject action (-1) is always valid
 
 ## Reward Function
 
@@ -505,6 +507,153 @@ Example: 49.56 / 100 = 0.496 per step
 | 50,000 | Development, initial training |
 | 200,000 | Production-ready baseline |
 | 1,000,000+ | Best performance, diminishing returns |
+
+## Distributed Training
+
+The RL module supports multi-GPU distributed training using PyTorch DistributedDataParallel (DDP) with `torchrun` as the recommended launcher.
+
+### Architecture
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                        torchrun Launcher                         │
+│            (sets RANK, LOCAL_RANK, WORLD_SIZE env vars)          │
+└──────────────────────────────┬──────────────────────────────────┘
+                               │
+          ┌────────────────────┼────────────────────┐
+          ▼                    ▼                    ▼
+   ┌─────────────┐      ┌─────────────┐      ┌─────────────┐
+   │   GPU 0     │      │   GPU 1     │      │   GPU N     │
+   │  (rank 0)   │      │  (rank 1)   │      │  (rank N)   │
+   │ ┌─────────┐ │      │ ┌─────────┐ │      │ ┌─────────┐ │
+   │ │ Policy  │ │      │ │ Policy  │ │      │ │ Policy  │ │
+   │ │  (DDP)  │◀┼──────┼▶│  (DDP)  │◀┼──────┼▶│  (DDP)  │ │
+   │ └─────────┘ │      │ └─────────┘ │      │ └─────────┘ │
+   │ ┌─────────┐ │      │ ┌─────────┐ │      │ ┌─────────┐ │
+   │ │VecEnv×8 │ │      │ │VecEnv×8 │ │      │ │VecEnv×8 │ │
+   │ └─────────┘ │      │ └─────────┘ │      │ └─────────┘ │
+   └─────────────┘      └─────────────┘      └─────────────┘
+          │                    │                    │
+          └────────────────────┼────────────────────┘
+                               ▼
+                    NCCL Backend (GPU-to-GPU)
+                  Synchronized Gradient Updates
+```
+
+### Key Components
+
+| Component | Description |
+|-----------|-------------|
+| `DistributedPPOTrainer` | Multi-GPU trainer with automatic DDP setup |
+| `VectorizedEnv` | Parallel environment wrapper per GPU |
+| `RolloutBuffer` | GAE-Lambda advantage computation |
+
+### Training Commands
+
+```bash
+# Single GPU (auto-detects, no torchrun needed)
+python scripts/train_rl_distributed.py --timesteps 100000 --num-envs 8
+
+# Multi-GPU with torchrun (RECOMMENDED)
+torchrun --nproc_per_node=4 scripts/train_rl_distributed.py --timesteps 2000000
+
+# Multi-GPU with custom settings
+torchrun --nproc_per_node=4 scripts/train_rl_distributed.py \
+    --timesteps 2000000 \
+    --num-envs 8 \
+    --batch-size 128 \
+    --lr 1e-4 \
+    --save-path models/rl/ppo/model_v2.pth
+
+# Multi-node training (across machines)
+torchrun --nnodes=2 --nproc_per_node=4 \
+    --rdzv_backend=c10d --rdzv_endpoint=MASTER_IP:29500 \
+    scripts/train_rl_distributed.py --timesteps 5000000
+```
+
+### Command-Line Options
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `--timesteps` | 100000 | Total training timesteps across all GPUs |
+| `--save-path` | models/rl/ppo/model_distributed.pth | Model save location |
+| `--lr` | 3e-4 | Learning rate |
+| `--batch-size` | 64 | PPO mini-batch size |
+| `--epochs` | 10 | PPO epochs per update |
+| `--gamma` | 0.99 | Discount factor |
+| `--gae-lambda` | 0.95 | GAE lambda |
+| `--clip-range` | 0.2 | PPO clip range |
+| `--num-envs` | 8 | Parallel environments per GPU |
+| `--rollout-steps` | 256 | Steps per rollout before update |
+| `--env-preset` | medium | Environment preset (small/medium/large/enterprise) |
+| `--log-interval` | 5000 | Log progress every N timesteps |
+
+### Progress Tracking
+
+Training outputs detailed progress for each GPU and aggregated global stats:
+
+```
+======================================================================
+DISTRIBUTED PPO TRAINING
+======================================================================
+  GPUs:                 4
+  Envs per GPU:         8
+  Total parallel envs:  32
+  Timesteps per GPU:    500,000
+  Total timesteps:      2,000,000
+  Rollout steps:        256
+  Batch size:           64
+  PPO epochs:           10
+  Learning rate:        0.0003
+======================================================================
+[GPU 0] Initialized - device: cuda:0, envs: 8
+[GPU 1] Initialized - device: cuda:1, envs: 8
+[GPU 2] Initialized - device: cuda:2, envs: 8
+[GPU 3] Initialized - device: cuda:3, envs: 8
+[GPU 0] Step 5,000/500,000 (1.0%) | Episodes: 12 | Reward: 0.45 | FPS: 850
+[GPU 1] Step 5,000/500,000 (1.0%) | Episodes: 11 | Reward: 0.42 | FPS: 840
+[GPU 2] Step 5,000/500,000 (1.0%) | Episodes: 13 | Reward: 0.48 | FPS: 855
+[GPU 3] Step 5,000/500,000 (1.0%) | Episodes: 10 | Reward: 0.40 | FPS: 835
+----------------------------------------------------------------------
+[GLOBAL] Step 20,000/2,000,000 (1.0%)
+         Total Episodes: 46 | Avg Reward: 0.44 | Combined FPS: 3,380
+         Policy Loss: 0.0234 | Value Loss: 0.0156 | Entropy: 1.2345
+         Elapsed: 5.9s | ETA: 586.1s
+----------------------------------------------------------------------
+...
+[GPU 0] Training complete - 500,000 steps, 1,247 episodes
+[GPU 1] Training complete - 500,000 steps, 1,238 episodes
+[GPU 2] Training complete - 500,000 steps, 1,251 episodes
+[GPU 3] Training complete - 500,000 steps, 1,230 episodes
+======================================================================
+TRAINING COMPLETE
+======================================================================
+  Total timesteps:  2,000,000
+  Total episodes:   4,966
+  Total time:       591.2s
+  Throughput:       3,383 steps/sec
+  Model saved to:   models/rl/ppo/model_distributed.pth
+======================================================================
+```
+
+### Scaling Guidelines
+
+| GPUs | Envs/GPU | Total Parallel Envs | Expected Speedup |
+|------|----------|---------------------|------------------|
+| 1    | 8        | 8                   | 1x (baseline)    |
+| 2    | 8        | 16                  | ~1.8x            |
+| 4    | 8        | 32                  | ~3.5x            |
+| 8    | 8        | 64                  | ~6x              |
+
+Note: Speedup is sub-linear due to gradient synchronization overhead via NCCL.
+
+### Best Practices
+
+1. **Use torchrun**: Always prefer `torchrun` over manual `mp.spawn` for multi-GPU training
+2. **Balanced workload**: Each GPU processes `total_timesteps / world_size` steps
+3. **Seed isolation**: Each GPU uses `rank * 10000 + base_seed` for environment randomization
+4. **Single-process saves**: Only rank 0 saves the model to avoid file conflicts
+5. **Barrier sync**: `dist.barrier()` ensures all GPUs complete before saving
 
 ## Future Improvements
 

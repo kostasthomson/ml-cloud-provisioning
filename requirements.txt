@@ -5,10 +5,8 @@ pydantic
 pydantic-settings
 python-json-logger
 numpy
-grpcio
-grpcio-tools
 pandas
 scikit-learn
 matplotlib
 torch
-gymnasium
+scipy

@@ -59,8 +59,11 @@ class PerformanceMetrics:
 def adapt_rl_state_to_scoring_request(state: RLState) -> ScoringAllocationRequest:
     task = state.task
     implementations = []
+    hw_has_accelerators = {hw.hw_type_id: hw.total_accelerators > 0 for hw in state.hw_types}
+
     for hw_type_id in task.compatible_hw_types:
-        requires_acc = task.requires_accelerator and hw_type_id != 1
+        hw_is_accelerator = hw_has_accelerators.get(hw_type_id, False)
+        requires_acc = task.requires_accelerator and hw_is_accelerator
         implementations.append(ScoringTaskImplementation(
             impl_id=hw_type_id,
             instructions=task.instructions,
@@ -145,7 +148,7 @@ def run_performance_study(
                 res = allocator.allocate(req)
                 action = res.selected_hw_type_id if res.selected_hw_type_id is not None else -1
             else:
-                valid_ids = [hw.hw_type_id for hw in state.hw_types] + [-1]
+                valid_ids = list(state.task.compatible_hw_types) + [-1]
                 action = random.choice(valid_ids)
 
             next_state, reward, terminated, truncated, info = env.step(action)
