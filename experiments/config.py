@@ -45,16 +45,21 @@ class ExperimentConfig:
     )
 
     ablation_configs: Dict[str, Dict] = field(default_factory=lambda: {
-        "full": {"energy_weight": 0.8, "sla_weight": 0.15, "rejection_penalty": 0.3},
-        "no_energy": {"energy_weight": 0.0, "sla_weight": 0.5, "rejection_penalty": 0.3},
-        "no_sla": {"energy_weight": 0.8, "sla_weight": 0.0, "rejection_penalty": 0.3},
-        "no_rejection_penalty": {"energy_weight": 0.8, "sla_weight": 0.15, "rejection_penalty": 0.0},
-        "energy_only": {"energy_weight": 1.0, "sla_weight": 0.0, "rejection_penalty": 0.0},
+        "full": {"energy_weight": 0.6, "sla_weight": 0.2, "rejection_penalty": 0.8, "acceptance_bonus": 0.3},
+        "no_energy": {"energy_weight": 0.0, "sla_weight": 0.4, "rejection_penalty": 0.8, "acceptance_bonus": 0.3},
+        "no_sla": {"energy_weight": 0.6, "sla_weight": 0.0, "rejection_penalty": 0.8, "acceptance_bonus": 0.3},
+        "no_rejection_penalty": {"energy_weight": 0.6, "sla_weight": 0.2, "rejection_penalty": 0.0, "acceptance_bonus": 0.3},
+        "no_acceptance_bonus": {"energy_weight": 0.6, "sla_weight": 0.2, "rejection_penalty": 0.8, "acceptance_bonus": 0.0},
+        "aggressive_accept": {"energy_weight": 0.4, "sla_weight": 0.2, "rejection_penalty": 1.2, "acceptance_bonus": 0.5},
     })
 
     generalization_train_preset: str = "medium"
     generalization_test_presets: List[str] = field(
-        default_factory=lambda: ["small", "medium", "large", "enterprise"]
+        default_factory=lambda: ["small", "medium", "large", "enterprise", "high_load", "stress_test"]
+    )
+
+    stress_test_presets: List[str] = field(
+        default_factory=lambda: ["high_load", "stress_test"]
     )
 
     def __post_init__(self):

@@ -9,5 +9,7 @@ Components:
 - pareto_analysis.py: Energy-acceptance tradeoff analysis
 - ablation_study.py: Component contribution analysis
 - generalization_test.py: Infrastructure-agnostic validation
+- stress_test.py: High-load scenario testing
+- generate_plots.py: Publication-ready figure generation
 - run_all_experiments.py: Master orchestration script
 """

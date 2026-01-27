@@ -53,7 +53,9 @@ class ExperimentRunner:
         run_pareto: bool = True,
         run_ablation: bool = True,
         run_generalization: bool = True,
-        run_baseline_comparison: bool = True
+        run_baseline_comparison: bool = True,
+        run_stress_test: bool = True,
+        generate_plots: bool = True
     ) -> Dict[str, Any]:
         """Run all experiments."""
         self.start_time = datetime.now()
@@ -69,6 +71,7 @@ class ExperimentRunner:
             ("pareto", run_pareto, self._run_pareto),
             ("ablation", run_ablation, self._run_ablation),
             ("generalization", run_generalization, self._run_generalization),
+            ("stress_test", run_stress_test, self._run_stress_test),
             ("baseline_comparison", run_baseline_comparison, self._run_baseline_comparison),
         ]
 
@@ -101,6 +104,13 @@ class ExperimentRunner:
         except Exception as e:
             logger.error(f"Summary report generation failed: {e}")
             self._save_intermediate_results()
+
+        if generate_plots:
+            try:
+                logger.info("\nGenerating plots...")
+                self._generate_plots()
+            except Exception as e:
+                logger.error(f"Plot generation failed: {e}")
 
         logger.info("\n" + "=" * 70)
         logger.info("ACADEMIC EVALUATION COMPLETE")
@@ -145,6 +155,16 @@ class ExperimentRunner:
         """Run generalization experiment."""
         from experiments.generalization_test import run_generalization_experiment
         return run_generalization_experiment(self.config)
+
+    def _run_stress_test(self) -> Dict[str, Any]:
+        """Run stress test experiment."""
+        from experiments.stress_test import run_stress_test
+        return run_stress_test(self.config)
+
+    def _generate_plots(self) -> Dict[str, Any]:
+        """Generate all plots from results."""
+        from experiments.generate_plots import generate_all_plots
+        return generate_all_plots(self.config.results_dir, self.config)
 
     def _run_baseline_comparison(self) -> Dict[str, Any]:
         """Run baseline comparison using existing benchmark script."""
@@ -415,8 +435,12 @@ Examples:
                         help='Skip ablation study')
     parser.add_argument('--skip-generalization', action='store_true',
                         help='Skip generalization test')
+    parser.add_argument('--skip-stress-test', action='store_true',
+                        help='Skip stress test')
     parser.add_argument('--skip-baseline', action='store_true',
                         help='Skip baseline comparison')
+    parser.add_argument('--skip-plots', action='store_true',
+                        help='Skip plot generation')
 
     args = parser.parse_args()
 
@@ -426,10 +450,12 @@ Examples:
 
     if args.quick:
         config.num_seeds = 3
-        config.training_timesteps = 50000
-        config.evaluation_episodes = 20
-        config.pareto_energy_weights = [0.6, 0.8, 0.95]
-        logger.info("Running in QUICK mode (reduced settings)")
+        config.training_timesteps = 30000
+        config.evaluation_episodes = 10
+        config.pareto_energy_weights = [0.6, 0.8]
+        config.ppo_epochs = 5
+        config.batch_size = 128
+        logger.info("Running in QUICK mode (reduced settings for fast testing)")
 
     if args.full:
         config.num_seeds = 10
@@ -455,7 +481,9 @@ Examples:
         run_pareto=not args.skip_pareto,
         run_ablation=not args.skip_ablation,
         run_generalization=not args.skip_generalization,
-        run_baseline_comparison=not args.skip_baseline
+        run_stress_test=not args.skip_stress_test,
+        run_baseline_comparison=not args.skip_baseline,
+        generate_plots=not args.skip_plots
     )
 
 

@@ -21,15 +21,20 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 from experiments.config import ExperimentConfig, setup_experiment_logging
 
 logger = None
+MATPLOTLIB_AVAILABLE = False
 
 try:
+    import matplotlib
+    matplotlib.use('Agg')
     import matplotlib.pyplot as plt
     import matplotlib.patches as mpatches
-    plt.style.use('seaborn-v0_8-whitegrid')
+    try:
+        plt.style.use('seaborn-v0_8-whitegrid')
+    except OSError:
+        plt.style.use('ggplot')
     MATPLOTLIB_AVAILABLE = True
 except ImportError:
     MATPLOTLIB_AVAILABLE = False
-    logger.warning("matplotlib not available. Install with: pip install matplotlib")
 
 
 def load_results(results_dir: Path) -> Dict[str, Any]:
@@ -301,22 +306,42 @@ def generate_all_plots(results_dir: Path, config: ExperimentConfig = None):
         logger = setup_experiment_logging(config, "generate_plots")
 
     if not MATPLOTLIB_AVAILABLE:
-        logger.error("matplotlib is required for plot generation")
-        return
+        logger.error("matplotlib is required for plot generation. Install with: pip install matplotlib")
+        return {"error": "matplotlib not available", "plots_generated": 0}
 
     results = load_results(results_dir)
     output_dir = results_dir / "figures"
     output_dir.mkdir(exist_ok=True)
 
     logger.info(f"Generating plots to {output_dir}")
+    logger.info(f"Available result files: {list(results.keys())}")
 
-    plot_pareto_front(results, output_dir)
-    plot_ablation_study(results, output_dir)
-    plot_generalization(results, output_dir)
-    plot_multi_seed_distribution(results, output_dir)
-    plot_baseline_comparison(results, output_dir)
+    plots_generated = 0
+    plots_failed = []
 
-    logger.info("All plots generated successfully")
+    plot_functions = [
+        ("pareto_front", plot_pareto_front),
+        ("ablation_study", plot_ablation_study),
+        ("generalization", plot_generalization),
+        ("multi_seed_distribution", plot_multi_seed_distribution),
+        ("baseline_comparison", plot_baseline_comparison),
+    ]
+
+    for plot_name, plot_func in plot_functions:
+        try:
+            plot_func(results, output_dir)
+            plots_generated += 1
+        except Exception as e:
+            logger.error(f"Failed to generate {plot_name}: {e}")
+            import traceback
+            logger.debug(traceback.format_exc())
+            plots_failed.append(plot_name)
+
+    logger.info(f"Plot generation complete: {plots_generated} succeeded, {len(plots_failed)} failed")
+    if plots_failed:
+        logger.warning(f"Failed plots: {plots_failed}")
+
+    return {"plots_generated": plots_generated, "plots_failed": plots_failed}
 
 
 def main():

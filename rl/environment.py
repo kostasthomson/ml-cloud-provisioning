@@ -76,6 +76,15 @@ REALISTIC_HW_CONFIGS = {
         HWTypeConfig(5, "MIC-KnightsLanding", 400, 1600, 100, 50, 32, 4400, 80000, 180, 260, 40, 200),
         HWTypeConfig(6, "CPU-HighMem", 1000, 16000, 400, 100, 0, 4400, 0, 200, 280),
     ],
+    'high_load': [
+        HWTypeConfig(1, "CPU-Standard", 128, 512, 20, 10, 0, 4400, 0, 163, 220),
+        HWTypeConfig(2, "GPU-Tesla-V100", 64, 256, 10, 10, 4, 4400, 125000, 200, 300, 50, 300),
+        HWTypeConfig(3, "CPU-HighMem", 64, 1024, 40, 10, 0, 4400, 0, 180, 250),
+    ],
+    'stress_test': [
+        HWTypeConfig(1, "CPU-Limited", 64, 256, 10, 5, 0, 4400, 0, 163, 220),
+        HWTypeConfig(2, "GPU-Limited", 32, 128, 5, 5, 2, 4400, 125000, 200, 300, 50, 300),
+    ],
 }
 
 

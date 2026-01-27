@@ -22,9 +22,10 @@ class RewardCalculator:
 
     def __init__(
         self,
-        energy_weight: float = 0.8,
-        sla_weight: float = 0.15,
-        rejection_penalty: float = 0.3,
+        energy_weight: float = 0.6,
+        sla_weight: float = 0.2,
+        rejection_penalty: float = 0.8,
+        acceptance_bonus: float = 0.3,
         normalize_energy: bool = True,
         energy_baseline: float = 0.05,
         energy_excellent_threshold: float = 0.03,
@@ -33,6 +34,7 @@ class RewardCalculator:
         self.energy_weight = energy_weight
         self.sla_weight = sla_weight
         self.rejection_penalty = rejection_penalty
+        self.acceptance_bonus = acceptance_bonus
         self.normalize_energy = normalize_energy
         self.energy_baseline = energy_baseline
         self.energy_excellent_threshold = energy_excellent_threshold
@@ -59,7 +61,7 @@ class RewardCalculator:
         if not outcome.accepted:
             return -self.rejection_penalty
 
-        reward = 0.0
+        reward = self.acceptance_bonus
         energy = outcome.energy_consumed_kwh
 
         self._update_running_stats(energy)
@@ -68,14 +70,14 @@ class RewardCalculator:
         reward += self.energy_weight * energy_reward
 
         if energy < self.energy_excellent_threshold:
-            reward += 0.3
+            reward += 0.2
         elif energy > self.energy_poor_threshold:
-            reward -= 0.2
+            reward -= 0.15
 
         if self._running_energy_count > 10:
             running_mean = self.get_running_mean()
             if energy < running_mean * 0.8:
-                reward += 0.15
+                reward += 0.1
             elif energy > running_mean * 1.2:
                 reward -= 0.1
 
@@ -83,11 +85,9 @@ class RewardCalculator:
             sla_reward = self._compute_sla_reward(outcome)
             reward += self.sla_weight * sla_reward
         else:
-            reward += self.sla_weight * 0.3
+            reward += self.sla_weight * 0.2
 
-        reward += 0.05
-
-        return max(-2.0, min(1.5, reward))
+        return max(-2.0, min(2.0, reward))
 
     def _update_running_stats(self, energy_kwh: float):
         """Update running statistics for adaptive normalization."""
@@ -165,6 +165,7 @@ class RewardCalculator:
             "energy_weight": self.energy_weight,
             "sla_weight": self.sla_weight,
             "rejection_penalty": self.rejection_penalty,
+            "acceptance_bonus": self.acceptance_bonus,
             "energy_baseline": self.energy_baseline,
             "energy_excellent_threshold": self.energy_excellent_threshold,
             "energy_poor_threshold": self.energy_poor_threshold,

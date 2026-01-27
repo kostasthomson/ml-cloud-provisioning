@@ -57,10 +57,12 @@ def train_ablation_config(
     seed: int = 42
 ) -> str:
     """Train a model with specific ablation configuration."""
+    acceptance_bonus = reward_config.get('acceptance_bonus', 0.3)
     logger.info(f"Training ablation config '{config_name}'...")
     logger.info(f"  energy_weight={reward_config['energy_weight']}, "
                 f"sla_weight={reward_config['sla_weight']}, "
-                f"rejection_penalty={reward_config['rejection_penalty']}")
+                f"rejection_penalty={reward_config['rejection_penalty']}, "
+                f"acceptance_bonus={acceptance_bonus}")
 
     np.random.seed(seed)
 
@@ -76,7 +78,8 @@ def train_ablation_config(
     env.reward_calculator = RewardCalculator(
         energy_weight=reward_config['energy_weight'],
         sla_weight=reward_config['sla_weight'],
-        rejection_penalty=reward_config['rejection_penalty']
+        rejection_penalty=reward_config['rejection_penalty'],
+        acceptance_bonus=acceptance_bonus
     )
 
     agent = RLAgent(device="auto", embed_dim=64)
