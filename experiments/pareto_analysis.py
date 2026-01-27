@@ -67,8 +67,9 @@ def train_with_energy_weight(
 
     env.reward_calculator = RewardCalculator(
         energy_weight=energy_weight,
-        sla_weight=1.0 - energy_weight - 0.05,
-        rejection_penalty=0.3
+        sla_weight=max(0.1, 1.0 - energy_weight - 0.1),
+        rejection_penalty=0.8,
+        acceptance_bonus=0.3
     )
 
     agent = RLAgent(device="auto", embed_dim=64)

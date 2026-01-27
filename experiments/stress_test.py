@@ -25,6 +25,7 @@ from rl.agent import RLAgent
 from rl.trainer import PPOTrainer
 from rl.schemas import RLTrainingConfig
 from entities.allocator.scoring_allocator import ScoringAllocator
+from scripts.benchmark_performance import run_performance_study
 from experiments.config import ExperimentConfig, setup_experiment_logging
 
 logger = None
@@ -60,42 +61,17 @@ def evaluate_agent_on_preset(
         energy_noise=config.energy_noise
     )
 
-    total_energy = 0.0
-    total_accepted = 0
-    total_tasks = 0
-    total_sla_violations = 0
-
-    for episode in range(config.evaluation_episodes):
-        state, _ = env.reset(seed=episode)
-        done = False
-
-        while not done:
-            action_result, _, _ = agent.predict(state, deterministic=True)
-            action = action_result.action
-
-            next_state, reward, terminated, truncated, info = env.step(action)
-            done = terminated or truncated
-
-            total_tasks += 1
-
-            if info.get('accepted', False):
-                total_accepted += 1
-                total_energy += info.get('energy', 0.0)
-
-                if state.task.deadline is not None:
-                    exec_time = info.get('exec_time', 0.0)
-                    if exec_time > state.task.deadline:
-                        total_sla_violations += 1
-
-            state = next_state
+    metrics = run_performance_study(
+        env, "ppo", model=agent, num_episodes=config.evaluation_episodes
+    )
 
     return {
-        "energy_per_task": total_energy / max(total_accepted, 1),
-        "acceptance_rate": total_accepted / max(total_tasks, 1),
-        "sla_compliance": 1.0 - (total_sla_violations / max(total_accepted, 1)),
-        "total_energy": total_energy,
-        "total_accepted": total_accepted,
-        "total_tasks": total_tasks
+        "energy_per_task": metrics.total_energy_kwh / max(metrics.total_accepted, 1),
+        "acceptance_rate": metrics.acceptance_rate,
+        "sla_compliance": metrics.sla_compliance_rate,
+        "total_energy": metrics.total_energy_kwh,
+        "total_accepted": metrics.total_accepted,
+        "total_tasks": metrics.total_tasks
     }
 
 
@@ -112,45 +88,17 @@ def evaluate_scoring_on_preset(
     )
     allocator = ScoringAllocator()
 
-    total_energy = 0.0
-    total_accepted = 0
-    total_tasks = 0
-    total_sla_violations = 0
-
-    for episode in range(config.evaluation_episodes):
-        state, _ = env.reset(seed=episode)
-        done = False
-
-        while not done:
-            hw_types = [hw.hw_type_id for hw in state.hw_types]
-            if hw_types:
-                action = np.random.choice(hw_types)
-            else:
-                action = -1
-
-            next_state, reward, terminated, truncated, info = env.step(action)
-            done = terminated or truncated
-
-            total_tasks += 1
-
-            if info.get('accepted', False):
-                total_accepted += 1
-                total_energy += info.get('energy', 0.0)
-
-                if state.task.deadline is not None:
-                    exec_time = info.get('exec_time', 0.0)
-                    if exec_time > state.task.deadline:
-                        total_sla_violations += 1
-
-            state = next_state
+    metrics = run_performance_study(
+        env, "scoring", allocator=allocator, num_episodes=config.evaluation_episodes
+    )
 
     return {
-        "energy_per_task": total_energy / max(total_accepted, 1),
-        "acceptance_rate": total_accepted / max(total_tasks, 1),
-        "sla_compliance": 1.0 - (total_sla_violations / max(total_accepted, 1)),
-        "total_energy": total_energy,
-        "total_accepted": total_accepted,
-        "total_tasks": total_tasks
+        "energy_per_task": metrics.total_energy_kwh / max(metrics.total_accepted, 1),
+        "acceptance_rate": metrics.acceptance_rate,
+        "sla_compliance": metrics.sla_compliance_rate,
+        "total_energy": metrics.total_energy_kwh,
+        "total_accepted": metrics.total_accepted,
+        "total_tasks": metrics.total_tasks
     }
 
 
