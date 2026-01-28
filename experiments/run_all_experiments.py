@@ -449,13 +449,13 @@ Examples:
     logger = setup_experiment_logging(config, "run_all_experiments")
 
     if args.quick:
-        config.num_seeds = 3
-        config.training_timesteps = 30000
-        config.evaluation_episodes = 10
-        config.pareto_energy_weights = [0.6, 0.8]
-        config.ppo_epochs = 5
-        config.batch_size = 128
-        logger.info("Running in QUICK mode (reduced settings for fast testing)")
+        config.num_seeds = 5
+        config.training_timesteps = 50000
+        config.evaluation_episodes = 20
+        config.pareto_energy_weights = [0.5, 0.7, 0.9]
+        config.ppo_epochs = 8
+        config.batch_size = 64
+        logger.info("Running in QUICK mode (~7-8 hours, balanced for statistical validity)")
 
     if args.full:
         config.num_seeds = 10
