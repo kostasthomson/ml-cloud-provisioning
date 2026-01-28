@@ -1,0 +1,115 @@
+{
+  "experiment": "multi_seed_training",
+  "timestamp": "2026-01-27T23:26:21.423644",
+  "status": "completed",
+  "config": {
+    "seeds": [
+      42,
+      123,
+      456
+    ],
+    "timesteps": 30000,
+    "evaluation_episodes": 10,
+    "env_preset": "medium",
+    "exec_time_noise": 0.15,
+    "energy_noise": 0.1
+  },
+  "completed_seeds": [
+    42,
+    123,
+    456
+  ],
+  "failed_seeds": [],
+  "training_results": [
+    {
+      "seed": 42,
+      "final_reward": 356.86534611487275,
+      "episodes_completed": 14,
+      "training_time_sec": 1000.798206,
+      "policy_loss_final": -0.0015156577741436195,
+      "value_loss_final": 8.593320469097659,
+      "model_path": "/home/anmak/ml-cloud-provisioning/results/academic/models/multi_seed/model_seed_42.pth"
+    },
+    {
+      "seed": 123,
+      "final_reward": 351.69019977017115,
+      "episodes_completed": 14,
+      "training_time_sec": 997.005774,
+      "policy_loss_final": -0.0015378369574671415,
+      "value_loss_final": 9.591334344365379,
+      "model_path": "/home/anmak/ml-cloud-provisioning/results/academic/models/multi_seed/model_seed_123.pth"
+    },
+    {
+      "seed": 456,
+      "final_reward": 382.99265175168597,
+      "episodes_completed": 14,
+      "training_time_sec": 995.990591,
+      "policy_loss_final": -0.0016086903429867092,
+      "value_loss_final": 8.597856702876815,
+      "model_path": "/home/anmak/ml-cloud-provisioning/results/academic/models/multi_seed/model_seed_456.pth"
+    }
+  ],
+  "evaluation_results": [
+    {
+      "seed": 42,
+      "total_energy_kwh": 0.6688961761442764,
+      "energy_per_task": 0.0011337223324479262,
+      "acceptance_rate": 0.59,
+      "sla_compliance_rate": 0.9338983050847458,
+      "avg_episode_reward": 43.65534343745854
+    },
+    {
+      "seed": 123,
+      "total_energy_kwh": 0.6819091354835632,
+      "energy_per_task": 0.0012155243056748007,
+      "acceptance_rate": 0.561,
+      "sla_compliance_rate": 0.9180035650623886,
+      "avg_episode_reward": 38.00994168792489
+    },
+    {
+      "seed": 456,
+      "total_energy_kwh": 0.5812428081190548,
+      "energy_per_task": 0.0010905118351201778,
+      "acceptance_rate": 0.533,
+      "sla_compliance_rate": 0.9155722326454034,
+      "avg_episode_reward": 32.06560947891991
+    }
+  ],
+  "statistics": {
+    "n_seeds": 3,
+    "energy_per_task": {
+      "mean": 0.0011465861577476348,
+      "std": 5.1840382904634525e-05,
+      "ci_95": [
+        0.0009888651664133443,
+        0.0013043071490819254
+      ],
+      "min": 0.0010905118351201778,
+      "max": 0.0012155243056748007
+    },
+    "acceptance_rate": {
+      "mean": 0.5613333333333334,
+      "std": 0.023271346234276055,
+      "ci_95": [
+        0.4905317768613151,
+        0.6321348898053516
+      ]
+    },
+    "sla_compliance_rate": {
+      "mean": 0.9224913675975127,
+      "std": 0.008126766944638575,
+      "ci_95": [
+        0.8977662080397782,
+        0.9472165271552472
+      ]
+    },
+    "avg_reward": {
+      "mean": 37.91029820143445,
+      "std": 4.732013660569593,
+      "ci_95": [
+        23.513454587732696,
+        52.307141815136205
+      ]
+    }
+  }
+}

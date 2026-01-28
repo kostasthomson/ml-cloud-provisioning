@@ -1,0 +1,66 @@
+{
+  "experiment": "multi_seed_training",
+  "timestamp": "2026-01-27T23:26:20.526944",
+  "status": "in_progress",
+  "completed_seeds": [
+    42,
+    123,
+    456
+  ],
+  "failed_seeds": [],
+  "training_results": [
+    {
+      "seed": 42,
+      "final_reward": 356.86534611487275,
+      "episodes_completed": 14,
+      "training_time_sec": 1000.798206,
+      "policy_loss_final": -0.0015156577741436195,
+      "value_loss_final": 8.593320469097659,
+      "model_path": "/home/anmak/ml-cloud-provisioning/results/academic/models/multi_seed/model_seed_42.pth"
+    },
+    {
+      "seed": 123,
+      "final_reward": 351.69019977017115,
+      "episodes_completed": 14,
+      "training_time_sec": 997.005774,
+      "policy_loss_final": -0.0015378369574671415,
+      "value_loss_final": 9.591334344365379,
+      "model_path": "/home/anmak/ml-cloud-provisioning/results/academic/models/multi_seed/model_seed_123.pth"
+    },
+    {
+      "seed": 456,
+      "final_reward": 382.99265175168597,
+      "episodes_completed": 14,
+      "training_time_sec": 995.990591,
+      "policy_loss_final": -0.0016086903429867092,
+      "value_loss_final": 8.597856702876815,
+      "model_path": "/home/anmak/ml-cloud-provisioning/results/academic/models/multi_seed/model_seed_456.pth"
+    }
+  ],
+  "evaluation_results": [
+    {
+      "seed": 42,
+      "total_energy_kwh": 0.6688961761442764,
+      "energy_per_task": 0.0011337223324479262,
+      "acceptance_rate": 0.59,
+      "sla_compliance_rate": 0.9338983050847458,
+      "avg_episode_reward": 43.65534343745854
+    },
+    {
+      "seed": 123,
+      "total_energy_kwh": 0.6819091354835632,
+      "energy_per_task": 0.0012155243056748007,
+      "acceptance_rate": 0.561,
+      "sla_compliance_rate": 0.9180035650623886,
+      "avg_episode_reward": 38.00994168792489
+    },
+    {
+      "seed": 456,
+      "total_energy_kwh": 0.5812428081190548,
+      "energy_per_task": 0.0010905118351201778,
+      "acceptance_rate": 0.533,
+      "sla_compliance_rate": 0.9155722326454034,
+      "avg_episode_reward": 32.06560947891991
+    }
+  ]
+}

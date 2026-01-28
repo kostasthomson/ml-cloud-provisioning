@@ -1,0 +1,11 @@
+{
+  "experiment": "stress_test",
+  "timestamp": "2026-01-28T02:15:15.981572",
+  "status": "in_progress",
+  "completed_presets": [],
+  "failed_presets": [
+    "high_load",
+    "stress_test"
+  ],
+  "results": []
+}
