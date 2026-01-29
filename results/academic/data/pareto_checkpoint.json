@@ -1,0 +1,46 @@
+{
+  "experiment": "pareto_analysis",
+  "timestamp": "2026-01-29T04:20:32.234080",
+  "status": "in_progress",
+  "completed_weights": [
+    0.5,
+    0.7,
+    0.9
+  ],
+  "failed_weights": [],
+  "all_points": [
+    {
+      "energy_weight": 0.5,
+      "avg_energy_per_task": 0.001208641363423136,
+      "acceptance_rate": 0.527,
+      "sla_compliance_rate": 0.9335863377609108,
+      "avg_reward": 30.81349061401774,
+      "total_energy": 1.2739079970479854,
+      "total_accepted": 1054,
+      "total_tasks": 2000,
+      "model_path": "/home/anmak/ml-cloud-provisioning/results/academic/models/pareto/model_energy_weight_0.50.pth"
+    },
+    {
+      "energy_weight": 0.7,
+      "avg_energy_per_task": 0.001115884111150721,
+      "acceptance_rate": 0.561,
+      "sla_compliance_rate": 0.9242424242424242,
+      "avg_reward": 37.904658782599235,
+      "total_energy": 1.2520219727111088,
+      "total_accepted": 1122,
+      "total_tasks": 2000,
+      "model_path": "/home/anmak/ml-cloud-provisioning/results/academic/models/pareto/model_energy_weight_0.70.pth"
+    },
+    {
+      "energy_weight": 0.9,
+      "avg_energy_per_task": 0.0009784110861461174,
+      "acceptance_rate": 0.5835,
+      "sla_compliance_rate": 0.9520137103684662,
+      "avg_reward": 42.585318964318915,
+      "total_energy": 1.141805737532519,
+      "total_accepted": 1167,
+      "total_tasks": 2000,
+      "model_path": "/home/anmak/ml-cloud-provisioning/results/academic/models/pareto/model_energy_weight_0.90.pth"
+    }
+  ]
+}
