@@ -22,15 +22,31 @@ class StateEncoder:
     - Task encoding is fixed-size regardless of HW types
     - Each HW type is encoded independently with fixed size
     - Works with any number of HW types (1, 2, 10, 100, etc.)
+
+    v2: Added scarcity signals (5 features) to improve generalization
+    across different capacity environments.
     """
 
     TASK_FEATURES = 12
     GLOBAL_FEATURES = 5
-    TASK_GLOBAL_DIM = TASK_FEATURES + GLOBAL_FEATURES  # 17
+    SCARCITY_FEATURES = 5
+    TASK_GLOBAL_DIM_V1 = TASK_FEATURES + GLOBAL_FEATURES  # 17 (legacy)
+    TASK_GLOBAL_DIM_V2 = TASK_FEATURES + GLOBAL_FEATURES + SCARCITY_FEATURES  # 22
     HW_FEATURES = 16
 
-    def __init__(self):
-        self.task_dim = self.TASK_GLOBAL_DIM
+    def __init__(self, use_scarcity_features: bool = True):
+        """
+        Initialize state encoder.
+
+        Args:
+            use_scarcity_features: If True, include scarcity signals (v2, 22-dim).
+                                   If False, use legacy encoding (v1, 17-dim).
+        """
+        self.use_scarcity_features = use_scarcity_features
+        if use_scarcity_features:
+            self.task_dim = self.TASK_GLOBAL_DIM_V2
+        else:
+            self.task_dim = self.TASK_GLOBAL_DIM_V1
         self.hw_dim = self.HW_FEATURES
 
     def encode(self, state: RLState) -> Tuple[np.ndarray, List[Tuple[int, np.ndarray]]]:
@@ -42,12 +58,17 @@ class StateEncoder:
 
         Returns:
             Tuple of:
-            - task_vec: np.ndarray of shape (TASK_GLOBAL_DIM,) - task + global features
+            - task_vec: np.ndarray of shape (TASK_GLOBAL_DIM,) - task + global + scarcity features
             - hw_list: List of (hw_type_id, hw_vec) tuples where hw_vec is (HW_FEATURES,)
         """
         task_vec = self._encode_task(state.task)
         global_vec = self._encode_global(state.global_state)
-        task_global_vec = np.concatenate([task_vec, global_vec])
+
+        if self.use_scarcity_features:
+            scarcity_vec = self._encode_scarcity(state)
+            task_global_vec = np.concatenate([task_vec, global_vec, scarcity_vec])
+        else:
+            task_global_vec = np.concatenate([task_vec, global_vec])
         task_global_vec = np.nan_to_num(task_global_vec, nan=0.0, posinf=1.0, neginf=0.0)
         task_global_vec = np.clip(task_global_vec, 0.0, 1.0).astype(np.float32)
 
@@ -106,6 +127,43 @@ class StateEncoder:
             global_state.recent_acceptance_rate,
             global_state.recent_avg_energy / 10.0,
             time_of_day,
+        ]
+
+        return np.array(features, dtype=np.float32)
+
+    def _encode_scarcity(self, state: RLState) -> np.ndarray:
+        """
+        Encode scarcity signals (5 values) to help generalization.
+
+        These features help the agent distinguish resource-constrained
+        states from abundant ones, improving generalization across
+        different capacity environments.
+        """
+        if not state.hw_types:
+            return np.zeros(self.SCARCITY_FEATURES, dtype=np.float32)
+
+        cpu_utils = [hw.utilization_cpu for hw in state.hw_types]
+        mem_utils = [hw.utilization_memory for hw in state.hw_types]
+
+        capacity_ratios = [
+            hw.available_cpus / max(hw.total_cpus, 1) for hw in state.hw_types
+        ]
+        mem_ratios = [
+            hw.available_memory / max(hw.total_memory, 1) for hw in state.hw_types
+        ]
+
+        avg_cpu_util = np.mean(cpu_utils)
+        avg_mem_util = np.mean(mem_utils)
+        min_cpu_capacity = min(capacity_ratios)
+        min_mem_capacity = min(mem_ratios)
+        scarcity_indicator = float(any(u > 0.8 for u in cpu_utils) or any(u > 0.8 for u in mem_utils))
+
+        features = [
+            avg_cpu_util,
+            avg_mem_util,
+            min_cpu_capacity,
+            min_mem_capacity,
+            scarcity_indicator,
         ]
 
         return np.array(features, dtype=np.float32)

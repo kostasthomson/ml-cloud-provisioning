@@ -350,6 +350,19 @@ class RLAgent:
             logger.warning("Loading old non-agnostic model - reinitializing")
             return
 
+        saved_task_dim = checkpoint.get('task_dim', 17)
+        if saved_task_dim != self.task_dim:
+            use_scarcity = saved_task_dim >= StateEncoder.TASK_GLOBAL_DIM_V2
+            logger.info(f"Adjusting encoder for saved model (task_dim={saved_task_dim}, scarcity={use_scarcity})")
+            self.encoder = StateEncoder(use_scarcity_features=use_scarcity)
+            self.task_dim = self.encoder.task_dim
+
+            self.policy = PolicyNetwork(
+                task_dim=self.task_dim,
+                hw_dim=self.hw_dim,
+                embed_dim=self.embed_dim
+            ).to(self.device)
+
         self.policy.load_state_dict(checkpoint['policy_state_dict'])
         self.is_trained = checkpoint.get('is_trained', True)
         self.training_timesteps = checkpoint.get('training_timesteps', 0)

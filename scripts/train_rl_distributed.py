@@ -72,10 +72,17 @@ Examples:
     parser.add_argument('--rollout-steps', type=int, default=256,
                         help='Steps per rollout before update (default: 256)')
     parser.add_argument('--env-preset', type=str, default='medium',
-                        choices=['small', 'medium', 'large', 'enterprise'],
+                        choices=['small', 'medium', 'large', 'enterprise', 'high_load', 'stress_test'],
                         help='Environment preset (default: medium)')
     parser.add_argument('--log-interval', type=int, default=5000,
                         help='Log progress every N timesteps (default: 5000)')
+    parser.add_argument('--domain-randomization', action='store_true',
+                        help='Enable domain randomization (sample from multiple presets)')
+    parser.add_argument('--domain-preset', type=str, default='mixed_capacity',
+                        choices=['mixed_capacity', 'constrained_first', 'full_spectrum', 'production'],
+                        help='Domain randomization preset group (default: mixed_capacity)')
+    parser.add_argument('--curriculum', action='store_true',
+                        help='Enable curriculum learning (start with harder presets)')
 
     args = parser.parse_args()
 
@@ -93,7 +100,11 @@ Examples:
         logger.info(f"Learning rate: {args.lr}")
         logger.info(f"Batch size: {args.batch_size}")
         logger.info(f"PPO epochs: {args.epochs}")
-        logger.info(f"Environment preset: {args.env_preset}")
+        if args.domain_randomization:
+            logger.info(f"Domain randomization: {args.domain_preset}")
+            logger.info(f"Curriculum learning: {args.curriculum}")
+        else:
+            logger.info(f"Environment preset: {args.env_preset}")
         logger.info("=" * 60)
 
     try:
@@ -113,6 +124,9 @@ Examples:
             env_preset=args.env_preset,
             log_interval=args.log_interval,
             save_path=args.save_path,
+            domain_randomization=args.domain_randomization,
+            domain_preset=args.domain_preset,
+            curriculum=args.curriculum,
         )
 
         if trainer.is_main_process:
