@@ -28,7 +28,7 @@ import json
 from .agent import PolicyNetwork
 from .schemas import RLTrainingConfig, RLState
 from .state_encoder import StateEncoder
-from .environment import CloudProvisioningEnv
+from .environment import CloudProvisioningEnv, DomainRandomizedEnv, DOMAIN_RANDOM_PRESETS
 
 logger = logging.getLogger(__name__)
 
@@ -128,17 +128,40 @@ class RolloutBuffer:
 class VectorizedEnv:
     """Vectorized environment for parallel rollouts."""
 
-    def __init__(self, num_envs: int, **env_kwargs):
+    def __init__(
+        self,
+        num_envs: int,
+        domain_randomization: bool = False,
+        domain_preset: str = 'mixed_capacity',
+        curriculum: bool = False,
+        **env_kwargs
+    ):
         self.num_envs = num_envs
-        self.envs = [CloudProvisioningEnv(**env_kwargs) for _ in range(num_envs)]
+        self.domain_randomization = domain_randomization
+        self.envs: List[CloudProvisioningEnv] = []
         self.states: List[RLState] = []
+        self.preset_counts: Dict[str, int] = {}
+
+        for _ in range(num_envs):
+            if domain_randomization:
+                env = DomainRandomizedEnv(
+                    domain_preset=domain_preset,
+                    curriculum=curriculum,
+                    **env_kwargs
+                )
+            else:
+                env = CloudProvisioningEnv(**env_kwargs)
+            self.envs.append(env)
 
     def reset(self, seed: int = None) -> List[RLState]:
         self.states = []
         for i, env in enumerate(self.envs):
             env_seed = (seed + i) if seed is not None else None
-            state, _ = env.reset(seed=env_seed)
+            state, info = env.reset(seed=env_seed)
             self.states.append(state)
+            if self.domain_randomization and 'preset' in info:
+                preset = info['preset']
+                self.preset_counts[preset] = self.preset_counts.get(preset, 0) + 1
         return self.states
 
     def step(self, actions: List[int]) -> Tuple[List[RLState], List[float], List[bool], List[Dict]]:
@@ -152,9 +175,12 @@ class VectorizedEnv:
             done = terminated or truncated
 
             if done:
-                reset_state, _ = env.reset()
+                reset_state, reset_info = env.reset()
                 next_states.append(reset_state)
                 info['terminal_state'] = next_state
+                if self.domain_randomization and 'preset' in reset_info:
+                    preset = reset_info['preset']
+                    self.preset_counts[preset] = self.preset_counts.get(preset, 0) + 1
             else:
                 next_states.append(next_state)
 
@@ -164,6 +190,10 @@ class VectorizedEnv:
 
         self.states = next_states
         return next_states, rewards, dones, infos
+
+    def get_preset_distribution(self) -> Dict[str, int]:
+        """Get distribution of presets sampled during training."""
+        return self.preset_counts.copy()
 
 
 class DistributedPPOTrainer:
@@ -210,7 +240,7 @@ class DistributedPPOTrainer:
         else:
             self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
-        self.encoder = StateEncoder()
+        self.encoder = StateEncoder(use_scarcity_features=True)
         self.policy = PolicyNetwork(
             task_dim=self.encoder.task_dim,
             hw_dim=self.encoder.hw_dim,
@@ -403,6 +433,9 @@ class DistributedPPOTrainer:
         env_preset: str = 'medium',
         log_interval: int = 5000,
         save_path: Optional[str] = None,
+        domain_randomization: bool = False,
+        domain_preset: str = 'mixed_capacity',
+        curriculum: bool = False,
     ) -> Dict[str, Any]:
         """
         Run training loop.
@@ -411,13 +444,24 @@ class DistributedPPOTrainer:
             total_timesteps: Total timesteps to train (across all processes)
             num_envs: Number of parallel environments per process
             rollout_steps: Steps to collect before each update
-            env_preset: Environment configuration preset
+            env_preset: Environment configuration preset (ignored if domain_randomization=True)
             log_interval: Log progress every N timesteps
             save_path: Path to save model (only main process saves)
+            domain_randomization: If True, sample from multiple presets
+            domain_preset: Named preset group for domain randomization
+            curriculum: If True, use curriculum learning (easier presets after harder)
         """
         timesteps_per_process = total_timesteps // self.world_size
 
-        vec_env = VectorizedEnv(num_envs, preset=env_preset)
+        if domain_randomization:
+            vec_env = VectorizedEnv(
+                num_envs,
+                domain_randomization=True,
+                domain_preset=domain_preset,
+                curriculum=curriculum
+            )
+        else:
+            vec_env = VectorizedEnv(num_envs, preset=env_preset)
         vec_env.reset(seed=self.rank * 10000)
 
         if self.is_main_process:
@@ -433,6 +477,12 @@ class DistributedPPOTrainer:
             print(f"  Batch size:           {self.batch_size}")
             print(f"  PPO epochs:           {self.n_epochs}")
             print(f"  Learning rate:        {self.learning_rate}")
+            if domain_randomization:
+                presets = DOMAIN_RANDOM_PRESETS.get(domain_preset, [domain_preset])
+                print(f"  Domain Random:        {domain_preset} -> {presets}")
+                print(f"  Curriculum:           {curriculum}")
+            else:
+                print(f"  Environment preset:   {env_preset}")
             print("=" * 70)
 
         print(f"[GPU {self.rank}] Initialized - device: {self.device}, envs: {num_envs}")
@@ -501,14 +551,22 @@ class DistributedPPOTrainer:
                 print(f"  Model saved to:   {save_path}")
             print("=" * 70)
 
-        return {
+        results = {
             'total_timesteps': total_steps,
             'episodes': self.episodes_completed,
             'avg_reward': np.mean(self.metrics.episode_rewards[-100:]) if self.metrics.episode_rewards else 0,
             'elapsed_time': elapsed,
             'fps': total_steps / elapsed,
             'metrics': self.metrics.to_dict(),
+            'domain_randomization': domain_randomization,
         }
+
+        if domain_randomization:
+            results['domain_preset'] = domain_preset
+            results['curriculum'] = curriculum
+            results['preset_distribution'] = vec_env.get_preset_distribution()
+
+        return results
 
     def save(self, path: str):
         """Save model checkpoint."""

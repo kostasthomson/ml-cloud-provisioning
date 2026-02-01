@@ -87,6 +87,13 @@ REALISTIC_HW_CONFIGS = {
     ],
 }
 
+DOMAIN_RANDOM_PRESETS = {
+    'mixed_capacity': ['small', 'medium', 'large'],
+    'constrained_first': ['stress_test', 'high_load', 'medium'],
+    'full_spectrum': ['stress_test', 'high_load', 'small', 'medium', 'large'],
+    'production': ['high_load', 'medium', 'large', 'enterprise'],
+}
+
 
 class CloudProvisioningEnv:
     """
@@ -494,3 +501,129 @@ class CloudProvisioningEnv:
     def get_hw_type_ids(self) -> List[int]:
         """Get list of HW type IDs."""
         return [cfg.hw_type_id for cfg in self.hw_configs]
+
+
+class DomainRandomizedEnv(CloudProvisioningEnv):
+    """
+    Environment that samples from multiple presets for domain randomization.
+
+    This improves generalization by exposing the agent to varied resource
+    capacities during training.
+    """
+
+    def __init__(
+        self,
+        presets: Optional[List[str]] = None,
+        domain_preset: str = 'mixed_capacity',
+        preset_weights: Optional[List[float]] = None,
+        curriculum: bool = False,
+        curriculum_threshold: float = 0.6,
+        **kwargs
+    ):
+        """
+        Initialize domain-randomized environment.
+
+        Args:
+            presets: List of preset names to sample from
+            domain_preset: Named preset group from DOMAIN_RANDOM_PRESETS
+            preset_weights: Sampling weights for each preset (uniform if None)
+            curriculum: If True, start with harder presets and progress to easier
+            curriculum_threshold: Acceptance rate threshold to advance curriculum
+            **kwargs: Additional arguments for CloudProvisioningEnv
+        """
+        if presets is None:
+            presets = DOMAIN_RANDOM_PRESETS.get(domain_preset, ['medium'])
+
+        self.available_presets = presets
+        self.preset_weights = preset_weights
+        self.curriculum = curriculum
+        self.curriculum_threshold = curriculum_threshold
+        self.curriculum_stage = 0
+        self.recent_acceptance_rates: List[float] = []
+
+        initial_preset = self._select_preset()
+        self.current_preset = initial_preset
+
+        kwargs.pop('preset', None)
+        kwargs.pop('hw_configs', None)
+
+        super().__init__(preset=initial_preset, **kwargs)
+
+        logger.info(f"DomainRandomizedEnv initialized with presets: {self.available_presets}")
+        if self.curriculum:
+            logger.info(f"Curriculum learning enabled, threshold: {self.curriculum_threshold}")
+
+    def _select_preset(self) -> str:
+        """Select a preset based on current strategy."""
+        if self.curriculum:
+            if self.curriculum_stage < len(self.available_presets):
+                return self.available_presets[self.curriculum_stage]
+            return self.available_presets[-1]
+
+        if self.preset_weights:
+            weights = np.array(self.preset_weights)
+            weights = weights / weights.sum()
+            return np.random.choice(self.available_presets, p=weights)
+
+        return np.random.choice(self.available_presets)
+
+    def _update_curriculum(self, acceptance_rate: float):
+        """Update curriculum stage based on recent performance."""
+        self.recent_acceptance_rates.append(acceptance_rate)
+
+        if len(self.recent_acceptance_rates) >= 10:
+            avg_rate = np.mean(self.recent_acceptance_rates[-10:])
+
+            if avg_rate >= self.curriculum_threshold:
+                if self.curriculum_stage < len(self.available_presets) - 1:
+                    self.curriculum_stage += 1
+                    logger.info(f"Curriculum advanced to stage {self.curriculum_stage}: "
+                               f"{self.available_presets[self.curriculum_stage]}")
+                    self.recent_acceptance_rates = []
+
+    def reset(self, seed: Optional[int] = None) -> Tuple[RLState, Dict]:
+        """Reset with a potentially new preset."""
+        if seed is not None:
+            np.random.seed(seed)
+
+        new_preset = self._select_preset()
+
+        if new_preset != self.current_preset:
+            self.hw_configs = REALISTIC_HW_CONFIGS.get(new_preset, REALISTIC_HW_CONFIGS['medium'])
+            self.current_preset = new_preset
+
+        self.current_step = 0
+        self.running_tasks = []
+        self.total_energy = 0.0
+        self.accepted_count = 0
+        self.rejected_count = 0
+        self.timestamp = np.random.uniform(0, 86400)
+        self.experience_idx = 0
+
+        self._init_hw_states()
+
+        state = self._generate_state()
+        return state, {'preset': self.current_preset}
+
+    def step(self, action: int) -> Tuple[RLState, float, bool, bool, Dict]:
+        """Execute action and track acceptance for curriculum."""
+        next_state, reward, done, truncated, info = super().step(action)
+
+        info['preset'] = self.current_preset
+
+        if done or truncated:
+            acceptance_rate = self.accepted_count / max(self.current_step, 1)
+            info['episode_acceptance_rate'] = acceptance_rate
+
+            if self.curriculum:
+                self._update_curriculum(acceptance_rate)
+
+        return next_state, reward, done, truncated, info
+
+    def get_current_preset(self) -> str:
+        """Get the current preset being used."""
+        return self.current_preset
+
+    def get_curriculum_stage(self) -> int:
+        """Get current curriculum stage."""
+        return self.curriculum_stage

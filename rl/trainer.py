@@ -17,6 +17,8 @@ from .agent import RLAgent
 from .schemas import RLTrainingConfig, RLTrainingStatus, RLExperience, RLState
 from .state_encoder import StateEncoder
 
+ENCODER_SCARCITY_DEFAULT = True
+
 logger = logging.getLogger(__name__)
 
 
