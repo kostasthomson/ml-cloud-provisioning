@@ -445,6 +445,9 @@ class CloudProvisioningEnv:
 
         base_time = task.instructions / max(compute * 1e6, 1)
 
+        min_exec_time = 5.0 + np.random.uniform(0, 10.0)
+        base_time = max(base_time, min_exec_time)
+
         if self.exec_time_noise > 0:
             noise_factor = np.random.uniform(1 - self.exec_time_noise, 1 + self.exec_time_noise)
             return base_time * noise_factor

@@ -107,9 +107,9 @@ class UtilizationTracker:
             else:
                 selected_hw_id = -1
 
-            hw_utils_before = self._capture_hw_utilizations(state)
-
             next_state, reward, done, truncated, info = self.env.step(selected_hw_id)
+
+            hw_utils_after = self._capture_hw_utilizations(next_state)
 
             accepted = info.get('accepted', False)
             energy = info.get('energy', 0.0)
@@ -147,7 +147,7 @@ class UtilizationTracker:
                 energy_kwh=energy,
                 cumulative_energy_kwh=cumulative_energy,
                 cumulative_acceptance_rate=cumulative_acc_rate,
-                hw_utilizations=hw_utils_before,
+                hw_utilizations=hw_utils_after,
                 task_requirements={
                     'num_vms': state.task.num_vms,
                     'vcpus_per_vm': state.task.vcpus_per_vm,
