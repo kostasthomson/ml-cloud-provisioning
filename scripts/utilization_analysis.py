@@ -15,6 +15,7 @@ import sys
 import argparse
 import json
 import logging
+import warnings
 from pathlib import Path
 from dataclasses import dataclass, field, asdict
 from typing import List, Dict, Optional, Any
@@ -22,6 +23,7 @@ import numpy as np
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
+warnings.filterwarnings("ignore", message="Can't initialize NVML")
 import torch
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
@@ -215,8 +217,8 @@ class UtilizationVisualizer:
         hw_ids = sorted(metrics.steps[0].hw_utilizations.keys())
         n_hw = len(hw_ids)
 
-        fig = plt.figure(figsize=(16, 4 + n_hw * 3))
-        gs = gridspec.GridSpec(2 + n_hw, 1, height_ratios=[2, 2] + [2] * n_hw, hspace=0.3)
+        fig = plt.figure(figsize=(16, 4 + n_hw * 3), constrained_layout=True)
+        gs = gridspec.GridSpec(2 + n_hw, 1, height_ratios=[2, 2] + [2] * n_hw, hspace=0.3, figure=fig)
 
         steps = [s.step for s in metrics.steps]
 
@@ -284,8 +286,6 @@ class UtilizationVisualizer:
 
         ax.set_xlabel('Step', fontsize=10)
 
-        plt.tight_layout()
-
         if save_name:
             for fmt in ['png', 'pdf']:
                 fig.savefig(self.output_dir / f'{save_name}.{fmt}', dpi=150, bbox_inches='tight')
@@ -295,7 +295,7 @@ class UtilizationVisualizer:
 
     def plot_comparative_utilization(self, all_metrics: Dict[str, List[EpisodeMetrics]], save_name: str = 'comparative_utilization'):
         n_presets = len(all_metrics)
-        fig, axes = plt.subplots(n_presets, 3, figsize=(18, 4 * n_presets))
+        fig, axes = plt.subplots(n_presets, 3, figsize=(18, 4 * n_presets), constrained_layout=True)
 
         if n_presets == 1:
             axes = axes.reshape(1, -1)
@@ -340,8 +340,6 @@ class UtilizationVisualizer:
         for ax in axes[-1]:
             ax.set_xlabel('Step', fontsize=10)
 
-        plt.tight_layout()
-
         for fmt in ['png', 'pdf']:
             fig.savefig(self.output_dir / f'{save_name}.{fmt}', dpi=150, bbox_inches='tight')
 
@@ -352,7 +350,7 @@ class UtilizationVisualizer:
         presets = list(all_metrics.keys())
         n_presets = len(presets)
 
-        fig, axes = plt.subplots(1, 2, figsize=(14, 6))
+        fig, axes = plt.subplots(1, 2, figsize=(14, 6), constrained_layout=True)
 
         capacity_rejects = []
         policy_rejects = []
@@ -400,8 +398,6 @@ class UtilizationVisualizer:
         ax2.legend(loc='upper right')
         ax2.set_ylim(0, 105)
         ax2.grid(True, alpha=0.3, axis='y')
-
-        plt.tight_layout()
 
         for fmt in ['png', 'pdf']:
             fig.savefig(self.output_dir / f'{save_name}.{fmt}', dpi=150, bbox_inches='tight')
