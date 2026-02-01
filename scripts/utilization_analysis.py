@@ -271,8 +271,9 @@ class UtilizationVisualizer:
             ax.plot(steps, mem_util, color=self.colors['memory'], linewidth=1.5, label='Memory', alpha=0.9)
             ax.plot(steps, net_util, color=self.colors['network'], linewidth=1.5, label='Network', alpha=0.9)
 
-            if any(u > 0 for u in acc_util):
-                ax.plot(steps, acc_util, color=self.colors['accelerator'], linewidth=1.5, label='Accelerator', alpha=0.9)
+            has_gpu = self._hw_has_gpu(metrics.preset, hw_id)
+            if has_gpu:
+                ax.plot(steps, acc_util, color=self.colors['accelerator'], linewidth=2, label='GPU', alpha=0.9)
 
             hw_name = self._get_hw_name(metrics.preset, hw_id)
             ax.set_ylabel(f'Utilization (%)', fontsize=10)
@@ -304,13 +305,15 @@ class UtilizationVisualizer:
             if not episodes or not episodes[0].steps:
                 continue
 
-            avg_metrics = self._average_episode_metrics(episodes)
+            avg_metrics = self._average_episode_metrics(episodes, preset=preset)
             steps = list(range(len(avg_metrics['cpu_util'])))
 
             ax_util = axes[row, 0]
             ax_util.plot(steps, avg_metrics['cpu_util'], color=self.colors['cpu'], linewidth=2, label='CPU')
             ax_util.plot(steps, avg_metrics['mem_util'], color=self.colors['memory'], linewidth=2, label='Memory')
             ax_util.plot(steps, avg_metrics['net_util'], color=self.colors['network'], linewidth=2, label='Network')
+            if avg_metrics.get('has_gpu', False):
+                ax_util.plot(steps, avg_metrics['gpu_util'], color=self.colors['accelerator'], linewidth=2, label='GPU')
             ax_util.fill_between(steps, avg_metrics['cpu_util'], alpha=0.2, color=self.colors['cpu'])
             ax_util.set_ylabel('Avg Utilization (%)', fontsize=10)
             ax_util.set_title(f'{preset.upper()} - Resource Utilization', fontsize=11, fontweight='bold')
@@ -405,15 +408,17 @@ class UtilizationVisualizer:
         plt.close(fig)
         logger.info(f"Saved rejection analysis: {save_name}")
 
-    def _average_episode_metrics(self, episodes: List[EpisodeMetrics]) -> Dict[str, List[float]]:
+    def _average_episode_metrics(self, episodes: List[EpisodeMetrics], preset: str = None) -> Dict[str, List[float]]:
         if not episodes:
             return {}
 
         min_steps = min(len(e.steps) for e in episodes)
+        gpu_hw_ids = self._get_gpu_hw_ids(preset) if preset else []
 
         cpu_utils = []
         mem_utils = []
         net_utils = []
+        gpu_utils = []
         energies = []
         acc_rates = []
 
@@ -421,6 +426,8 @@ class UtilizationVisualizer:
             cpu_sum = 0
             mem_sum = 0
             net_sum = 0
+            gpu_sum = 0
+            gpu_count = 0
             energy_sum = 0
             acc_sum = 0
 
@@ -431,6 +438,12 @@ class UtilizationVisualizer:
                 cpu_sum += np.mean([step.hw_utilizations[h]['cpu'] for h in hw_ids]) * 100
                 mem_sum += np.mean([step.hw_utilizations[h]['memory'] for h in hw_ids]) * 100
                 net_sum += np.mean([step.hw_utilizations[h]['network'] for h in hw_ids]) * 100
+
+                gpu_hw_in_step = [h for h in hw_ids if h in gpu_hw_ids]
+                if gpu_hw_in_step:
+                    gpu_sum += np.mean([step.hw_utilizations[h]['accelerator'] for h in gpu_hw_in_step]) * 100
+                    gpu_count += 1
+
                 energy_sum += step.cumulative_energy_kwh
                 acc_sum += step.cumulative_acceptance_rate * 100
 
@@ -438,6 +451,7 @@ class UtilizationVisualizer:
             cpu_utils.append(cpu_sum / n)
             mem_utils.append(mem_sum / n)
             net_utils.append(net_sum / n)
+            gpu_utils.append(gpu_sum / gpu_count if gpu_count > 0 else 0)
             energies.append(energy_sum / n)
             acc_rates.append(acc_sum / n)
 
@@ -445,6 +459,8 @@ class UtilizationVisualizer:
             'cpu_util': cpu_utils,
             'mem_util': mem_utils,
             'net_util': net_utils,
+            'gpu_util': gpu_utils,
+            'has_gpu': len(gpu_hw_ids) > 0,
             'cumulative_energy': energies,
             'acceptance_rate': acc_rates,
         }
@@ -455,6 +471,17 @@ class UtilizationVisualizer:
             if cfg.hw_type_id == hw_id:
                 return cfg.name
         return f"HW-{hw_id}"
+
+    def _hw_has_gpu(self, preset: str, hw_id: int) -> bool:
+        configs = REALISTIC_HW_CONFIGS.get(preset, [])
+        for cfg in configs:
+            if cfg.hw_type_id == hw_id:
+                return cfg.total_accelerators > 0
+        return False
+
+    def _get_gpu_hw_ids(self, preset: str) -> List[int]:
+        configs = REALISTIC_HW_CONFIGS.get(preset, [])
+        return [cfg.hw_type_id for cfg in configs if cfg.total_accelerators > 0]
 
 
 def run_analysis(
