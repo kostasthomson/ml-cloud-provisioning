@@ -209,14 +209,18 @@ class RLAgent:
         self,
         model_path: Optional[str] = None,
         device: str = "auto",
-        embed_dim: int = 64
+        embed_dim: int = 64,
+        use_capacity_features: bool = False
     ):
         if device == "auto":
             self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         else:
             self.device = torch.device(device)
 
-        self.encoder = StateEncoder()
+        self.encoder = StateEncoder(
+            use_scarcity_features=True,
+            use_capacity_features=use_capacity_features
+        )
         self.reward_calculator = RewardCalculator()
 
         self.task_dim = self.encoder.task_dim
@@ -352,9 +356,14 @@ class RLAgent:
 
         saved_task_dim = checkpoint.get('task_dim', 17)
         if saved_task_dim != self.task_dim:
+            use_capacity = saved_task_dim >= StateEncoder.TASK_GLOBAL_DIM_V3
             use_scarcity = saved_task_dim >= StateEncoder.TASK_GLOBAL_DIM_V2
-            logger.info(f"Adjusting encoder for saved model (task_dim={saved_task_dim}, scarcity={use_scarcity})")
-            self.encoder = StateEncoder(use_scarcity_features=use_scarcity)
+            logger.info(f"Adjusting encoder for saved model (task_dim={saved_task_dim}, "
+                       f"scarcity={use_scarcity}, capacity={use_capacity})")
+            self.encoder = StateEncoder(
+                use_scarcity_features=use_scarcity,
+                use_capacity_features=use_capacity
+            )
             self.task_dim = self.encoder.task_dim
 
             self.policy = PolicyNetwork(

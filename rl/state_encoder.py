@@ -23,27 +23,36 @@ class StateEncoder:
     - Each HW type is encoded independently with fixed size
     - Works with any number of HW types (1, 2, 10, 100, etc.)
 
-    v2: Added scarcity signals (5 features) to improve generalization
-    across different capacity environments.
+    Version history:
+    - v1: Basic task + global features (17-dim)
+    - v2: Added scarcity signals (22-dim)
+    - v3: Added capacity scale features (28-dim) - addresses scale blindness
     """
 
     TASK_FEATURES = 12
     GLOBAL_FEATURES = 5
     SCARCITY_FEATURES = 5
+    CAPACITY_FEATURES = 6
     TASK_GLOBAL_DIM_V1 = TASK_FEATURES + GLOBAL_FEATURES  # 17 (legacy)
     TASK_GLOBAL_DIM_V2 = TASK_FEATURES + GLOBAL_FEATURES + SCARCITY_FEATURES  # 22
+    TASK_GLOBAL_DIM_V3 = TASK_FEATURES + GLOBAL_FEATURES + SCARCITY_FEATURES + CAPACITY_FEATURES  # 28
     HW_FEATURES = 16
 
-    def __init__(self, use_scarcity_features: bool = True):
+    def __init__(self, use_scarcity_features: bool = True, use_capacity_features: bool = False):
         """
         Initialize state encoder.
 
         Args:
-            use_scarcity_features: If True, include scarcity signals (v2, 22-dim).
-                                   If False, use legacy encoding (v1, 17-dim).
+            use_scarcity_features: If True, include scarcity signals (v2).
+            use_capacity_features: If True, include capacity scale signals (v3).
+                                   Requires use_scarcity_features=True.
         """
         self.use_scarcity_features = use_scarcity_features
-        if use_scarcity_features:
+        self.use_capacity_features = use_capacity_features and use_scarcity_features
+
+        if self.use_capacity_features:
+            self.task_dim = self.TASK_GLOBAL_DIM_V3
+        elif use_scarcity_features:
             self.task_dim = self.TASK_GLOBAL_DIM_V2
         else:
             self.task_dim = self.TASK_GLOBAL_DIM_V1
@@ -64,7 +73,11 @@ class StateEncoder:
         task_vec = self._encode_task(state.task)
         global_vec = self._encode_global(state.global_state)
 
-        if self.use_scarcity_features:
+        if self.use_capacity_features:
+            scarcity_vec = self._encode_scarcity(state)
+            capacity_vec = self._encode_capacity(state)
+            task_global_vec = np.concatenate([task_vec, global_vec, scarcity_vec, capacity_vec])
+        elif self.use_scarcity_features:
             scarcity_vec = self._encode_scarcity(state)
             task_global_vec = np.concatenate([task_vec, global_vec, scarcity_vec])
         else:
@@ -164,6 +177,55 @@ class StateEncoder:
             min_cpu_capacity,
             min_mem_capacity,
             scarcity_indicator,
+        ]
+
+        return np.array(features, dtype=np.float32)
+
+    def _encode_capacity(self, state: RLState) -> np.ndarray:
+        """
+        Encode capacity scale features (6 values) to address scale blindness.
+
+        These features provide absolute capacity information that helps the agent
+        distinguish between environments of different scales (e.g., medium vs stress_test).
+
+        v3 feature set addresses the core issue: utilization ratios hide absolute scale.
+        """
+        if not state.hw_types:
+            return np.zeros(self.CAPACITY_FEATURES, dtype=np.float32)
+
+        total_cpus = sum(hw.total_cpus for hw in state.hw_types)
+        total_memory = sum(hw.total_memory for hw in state.hw_types)
+        available_cpus = sum(hw.available_cpus for hw in state.hw_types)
+        available_memory = sum(hw.available_memory for hw in state.hw_types)
+
+        task = state.task
+        task_cpus_needed = task.num_vms * task.vcpus_per_vm
+        task_memory_needed = task.num_vms * task.memory_per_vm
+
+        cpu_fit_ratio = available_cpus / max(task_cpus_needed, 1)
+        mem_fit_ratio = available_memory / max(task_memory_needed, 1)
+        task_fit_ratio = min(cpu_fit_ratio, mem_fit_ratio)
+
+        if total_cpus >= 2000:
+            scale_bucket = 1.0  # enterprise
+        elif total_cpus >= 1000:
+            scale_bucket = 0.75  # large
+        elif total_cpus >= 500:
+            scale_bucket = 0.5  # medium
+        elif total_cpus >= 200:
+            scale_bucket = 0.25  # small
+        else:
+            scale_bucket = 0.1  # stress_test/high_load
+
+        task_relative_size = task_cpus_needed / max(total_cpus, 1)
+
+        features = [
+            min(total_cpus / 2000.0, 1.0),
+            min(total_memory / 8000.0, 1.0),
+            min(cpu_fit_ratio / 10.0, 1.0),
+            min(mem_fit_ratio / 10.0, 1.0),
+            scale_bucket,
+            min(task_relative_size * 10.0, 1.0),
         ]
 
         return np.array(features, dtype=np.float32)

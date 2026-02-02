@@ -91,6 +91,8 @@ Examples:
                         help='Rejection penalty scale when resources available (default: 1.5)')
     parser.add_argument('--scarcity-acceptance-scale', type=float, default=2.0,
                         help='Acceptance bonus scale under scarcity (default: 2.0)')
+    parser.add_argument('--use-capacity-features', action='store_true',
+                        help='Enable v3 capacity scale features (addresses scale blindness)')
 
     args = parser.parse_args()
 
@@ -114,6 +116,7 @@ Examples:
         else:
             logger.info(f"Environment preset: {args.env_preset}")
         logger.info(f"Scarcity-aware rewards: {args.scarcity_aware}")
+        logger.info(f"Capacity features (v3): {args.use_capacity_features}")
         logger.info("=" * 60)
 
     reward_config = {
@@ -131,6 +134,7 @@ Examples:
             clip_range=args.clip_range,
             n_epochs=args.epochs,
             batch_size=args.batch_size,
+            use_capacity_features=args.use_capacity_features,
         )
 
         results = trainer.train(

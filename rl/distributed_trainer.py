@@ -215,6 +215,7 @@ class DistributedPPOTrainer:
         max_grad_norm: float = 0.5,
         n_epochs: int = 10,
         batch_size: int = 64,
+        use_capacity_features: bool = False,
     ):
         self.learning_rate = learning_rate
         self.gamma = gamma
@@ -241,7 +242,11 @@ class DistributedPPOTrainer:
         else:
             self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
-        self.encoder = StateEncoder(use_scarcity_features=True)
+        self.use_capacity_features = use_capacity_features
+        self.encoder = StateEncoder(
+            use_scarcity_features=True,
+            use_capacity_features=use_capacity_features
+        )
         self.policy = PolicyNetwork(
             task_dim=self.encoder.task_dim,
             hw_dim=self.encoder.hw_dim,

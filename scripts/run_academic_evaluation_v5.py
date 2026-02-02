@@ -134,6 +134,7 @@ def train_distributed(
     gamma: float,
     gae_lambda: float,
     clip_range: float,
+    use_capacity_features: bool = False,
 ) -> Dict[str, Any]:
     if is_main_process():
         logger.info("=" * 70)
@@ -142,6 +143,7 @@ def train_distributed(
         logger.info(f"  Timesteps: {timesteps:,}")
         logger.info(f"  Domain preset: {domain_preset}")
         logger.info(f"  Scarcity-aware: {scarcity_aware}")
+        logger.info(f"  Capacity features (v3): {use_capacity_features}")
         logger.info(f"  Num envs: {num_envs}")
 
     reward_config = {
@@ -158,6 +160,7 @@ def train_distributed(
         clip_range=clip_range,
         n_epochs=epochs,
         batch_size=batch_size,
+        use_capacity_features=use_capacity_features,
     )
 
     model_path = str(output.models_dir / 'model_v5.pth')
@@ -192,6 +195,7 @@ def train_distributed(
             'scarcity_aware': scarcity_aware,
             'scarcity_rejection_scale': scarcity_rejection_scale,
             'scarcity_acceptance_scale': scarcity_acceptance_scale,
+            'use_capacity_features': use_capacity_features,
             'lr': lr,
             'batch_size': batch_size,
             'epochs': epochs,
@@ -519,6 +523,8 @@ def main():
                         help='Path to existing model (for --skip-training)')
     parser.add_argument('--v4-baseline', type=str, default=None,
                         help='Path to v4 baseline JSON for comparison')
+    parser.add_argument('--use-capacity-features', action='store_true',
+                        help='Enable v3 capacity scale features (addresses scale blindness)')
 
     args = parser.parse_args()
 
@@ -532,6 +538,7 @@ def main():
         logger.info(f"Timesteps: {args.timesteps}")
         logger.info(f"Domain preset: {args.domain_preset}")
         logger.info(f"Scarcity-aware: {args.scarcity_aware}")
+        logger.info(f"Capacity features (v3): {args.use_capacity_features}")
         logger.info("=" * 70)
 
     training_results = None
@@ -559,6 +566,7 @@ def main():
             gamma=args.gamma,
             gae_lambda=args.gae_lambda,
             clip_range=args.clip_range,
+            use_capacity_features=args.use_capacity_features,
         )
         model_path = training_results['model_path']
 
