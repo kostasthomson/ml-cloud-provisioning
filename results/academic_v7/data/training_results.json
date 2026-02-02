@@ -1,0 +1,21 @@
+{
+  "timesteps": 507904,
+  "episodes": 56,
+  "avg_reward": -76.42941167336286,
+  "training_time_sec": 6168.387290477753,
+  "fps": 82.34009151965775,
+  "model_path": "results/academic_v7/models/model_v5.pth",
+  "config": {
+    "domain_preset": "mixed_capacity",
+    "curriculum": true,
+    "scarcity_aware": true,
+    "scarcity_rejection_scale": 1.5,
+    "scarcity_acceptance_scale": 2.0,
+    "use_capacity_features": true,
+    "lr": 0.0003,
+    "batch_size": 64,
+    "epochs": 10,
+    "gamma": 0.99,
+    "num_envs": 8
+  }
+}
