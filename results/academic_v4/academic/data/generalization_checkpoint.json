@@ -1,0 +1,101 @@
+{
+  "experiment": "generalization_test",
+  "timestamp": "2026-01-29T09:17:24.291276",
+  "status": "in_progress",
+  "model_path": "/home/anmak/ml-cloud-provisioning/results/academic/models/generalization/model_trained_on_medium.pth",
+  "completed_presets": [
+    "small",
+    "medium",
+    "large",
+    "enterprise",
+    "high_load",
+    "stress_test"
+  ],
+  "failed_presets": [],
+  "results": [
+    {
+      "train_preset": "medium",
+      "test_preset": "small",
+      "num_hw_types_train": 3,
+      "num_hw_types_test": 2,
+      "avg_energy_per_task": 0.0006833314531767031,
+      "acceptance_rate": 0.344,
+      "sla_compliance_rate": 0.9316860465116279,
+      "avg_reward": -7.197503273103868,
+      "total_energy": 0.4701320397855717,
+      "total_accepted": 688,
+      "total_tasks": 2000,
+      "is_same_config": false
+    },
+    {
+      "train_preset": "medium",
+      "test_preset": "medium",
+      "num_hw_types_train": 3,
+      "num_hw_types_test": 3,
+      "avg_energy_per_task": 0.0009893807329901187,
+      "acceptance_rate": 0.571,
+      "sla_compliance_rate": 0.9518388791593695,
+      "avg_reward": 40.005160239472495,
+      "total_energy": 1.1298727970747156,
+      "total_accepted": 1142,
+      "total_tasks": 2000,
+      "is_same_config": true
+    },
+    {
+      "train_preset": "medium",
+      "test_preset": "large",
+      "num_hw_types_train": 3,
+      "num_hw_types_test": 4,
+      "avg_energy_per_task": 0.0012355165660721602,
+      "acceptance_rate": 0.7085,
+      "sla_compliance_rate": 0.9428369795342273,
+      "avg_reward": 68.34883375713365,
+      "total_energy": 1.750726974124251,
+      "total_accepted": 1417,
+      "total_tasks": 2000,
+      "is_same_config": false
+    },
+    {
+      "train_preset": "medium",
+      "test_preset": "enterprise",
+      "num_hw_types_train": 3,
+      "num_hw_types_test": 6,
+      "avg_energy_per_task": 0.0013578381306807248,
+      "acceptance_rate": 0.756,
+      "sla_compliance_rate": 0.951058201058201,
+      "avg_reward": 78.35063748033905,
+      "total_energy": 2.0530512535892558,
+      "total_accepted": 1512,
+      "total_tasks": 2000,
+      "is_same_config": false
+    },
+    {
+      "train_preset": "medium",
+      "test_preset": "high_load",
+      "num_hw_types_train": 3,
+      "num_hw_types_test": 3,
+      "avg_energy_per_task": 0.00031313005512289345,
+      "acceptance_rate": 0.3535,
+      "sla_compliance_rate": 0.9504950495049505,
+      "avg_reward": -5.675999999999829,
+      "total_energy": 0.22138294897188568,
+      "total_accepted": 707,
+      "total_tasks": 2000,
+      "is_same_config": false
+    },
+    {
+      "train_preset": "medium",
+      "test_preset": "stress_test",
+      "num_hw_types_train": 3,
+      "num_hw_types_test": 2,
+      "avg_energy_per_task": 0.00034414160028915146,
+      "acceptance_rate": 0.1795,
+      "sla_compliance_rate": 0.9303621169916434,
+      "avg_reward": -42.339999999998966,
+      "total_energy": 0.12354683450380538,
+      "total_accepted": 359,
+      "total_tasks": 2000,
+      "is_same_config": false
+    }
+  ]
+}

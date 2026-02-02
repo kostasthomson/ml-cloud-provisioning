@@ -1,0 +1,220 @@
+{
+  "small": {
+    "acceptance_rate": 0.3218,
+    "avg_energy_kwh": 0.09834711173857755,
+    "std_energy_kwh": 0.018500091350775558,
+    "energy_per_task": 0.0006197333294988188,
+    "capacity_rejections": 130.6,
+    "policy_rejections": 208.5,
+    "total_tasks": 5000,
+    "total_accepted": 1609
+  },
+  "medium": {
+    "acceptance_rate": 0.5184,
+    "avg_energy_kwh": 0.2706146011202781,
+    "std_energy_kwh": 0.03480573859023309,
+    "energy_per_task": 0.0010473047450113003,
+    "capacity_rejections": 130.0,
+    "policy_rejections": 110.8,
+    "total_tasks": 5000,
+    "total_accepted": 2592
+  },
+  "large": {
+    "acceptance_rate": 0.6752,
+    "avg_energy_kwh": 0.4029034971440016,
+    "std_energy_kwh": 0.04552904165726532,
+    "energy_per_task": 0.001194305724735892,
+    "capacity_rejections": 119.9,
+    "policy_rejections": 42.5,
+    "total_tasks": 5000,
+    "total_accepted": 3376
+  },
+  "high_load": {
+    "acceptance_rate": 0.2926,
+    "avg_energy_kwh": 0.11324002794932761,
+    "std_energy_kwh": 0.024901859104675402,
+    "energy_per_task": 0.0007967899018423532,
+    "capacity_rejections": 148.4,
+    "policy_rejections": 205.3,
+    "total_tasks": 5000,
+    "total_accepted": 1463
+  },
+  "stress_test": {
+    "acceptance_rate": 0.1544,
+    "avg_energy_kwh": 0.051803917852914494,
+    "std_energy_kwh": 0.014431268902637403,
+    "energy_per_task": 0.0007164172807986022,
+    "capacity_rejections": 128.6,
+    "policy_rejections": 294.2,
+    "total_tasks": 5000,
+    "total_accepted": 772
+  },
+  "enterprise": {
+    "acceptance_rate": 0.8038,
+    "avg_energy_kwh": 0.6162840607059984,
+    "std_energy_kwh": 0.06431426733315095,
+    "energy_per_task": 0.0015344304073424313,
+    "capacity_rejections": 91.3,
+    "policy_rejections": 6.8,
+    "total_tasks": 5000,
+    "total_accepted": 4019
+  }
+  "experiment": "generalization_test",
+  "timestamp": "2026-01-29T09:17:24.292026",
+  "status": "completed",
+  "config": {
+    "train_preset": "medium",
+    "test_presets": [
+      "small",
+      "medium",
+      "large",
+      "enterprise",
+      "high_load",
+      "stress_test"
+    ],
+    "timesteps": 50000,
+    "evaluation_episodes": 20
+  },
+  "hw_type_counts": {
+    "medium": 3,
+    "small": 2,
+    "large": 4,
+    "enterprise": 6,
+    "high_load": 3,
+    "stress_test": 2
+  },
+  "completed_presets": [
+    "small",
+    "medium",
+    "large",
+    "enterprise",
+    "high_load",
+    "stress_test"
+  ],
+  "failed_presets": [],
+  "results": [
+    {
+      "train_preset": "medium",
+      "test_preset": "small",
+      "num_hw_types_train": 3,
+      "num_hw_types_test": 2,
+      "avg_energy_per_task": 0.0006833314531767031,
+      "acceptance_rate": 0.344,
+      "sla_compliance_rate": 0.9316860465116279,
+      "avg_reward": -7.197503273103868,
+      "total_energy": 0.4701320397855717,
+      "total_accepted": 688,
+      "total_tasks": 2000,
+      "is_same_config": false
+    },
+    {
+      "train_preset": "medium",
+      "test_preset": "medium",
+      "num_hw_types_train": 3,
+      "num_hw_types_test": 3,
+      "avg_energy_per_task": 0.0009893807329901187,
+      "acceptance_rate": 0.571,
+      "sla_compliance_rate": 0.9518388791593695,
+      "avg_reward": 40.005160239472495,
+      "total_energy": 1.1298727970747156,
+      "total_accepted": 1142,
+      "total_tasks": 2000,
+      "is_same_config": true
+    },
+    {
+      "train_preset": "medium",
+      "test_preset": "large",
+      "num_hw_types_train": 3,
+      "num_hw_types_test": 4,
+      "avg_energy_per_task": 0.0012355165660721602,
+      "acceptance_rate": 0.7085,
+      "sla_compliance_rate": 0.9428369795342273,
+      "avg_reward": 68.34883375713365,
+      "total_energy": 1.750726974124251,
+      "total_accepted": 1417,
+      "total_tasks": 2000,
+      "is_same_config": false
+    },
+    {
+      "train_preset": "medium",
+      "test_preset": "enterprise",
+      "num_hw_types_train": 3,
+      "num_hw_types_test": 6,
+      "avg_energy_per_task": 0.0013578381306807248,
+      "acceptance_rate": 0.756,
+      "sla_compliance_rate": 0.951058201058201,
+      "avg_reward": 78.35063748033905,
+      "total_energy": 2.0530512535892558,
+      "total_accepted": 1512,
+      "total_tasks": 2000,
+      "is_same_config": false
+    },
+    {
+      "train_preset": "medium",
+      "test_preset": "high_load",
+      "num_hw_types_train": 3,
+      "num_hw_types_test": 3,
+      "avg_energy_per_task": 0.00031313005512289345,
+      "acceptance_rate": 0.3535,
+      "sla_compliance_rate": 0.9504950495049505,
+      "avg_reward": -5.675999999999829,
+      "total_energy": 0.22138294897188568,
+      "total_accepted": 707,
+      "total_tasks": 2000,
+      "is_same_config": false
+    },
+    {
+      "train_preset": "medium",
+      "test_preset": "stress_test",
+      "num_hw_types_train": 3,
+      "num_hw_types_test": 2,
+      "avg_energy_per_task": 0.00034414160028915146,
+      "acceptance_rate": 0.1795,
+      "sla_compliance_rate": 0.9303621169916434,
+      "avg_reward": -42.339999999998966,
+      "total_energy": 0.12354683450380538,
+      "total_accepted": 359,
+      "total_tasks": 2000,
+      "is_same_config": false
+    }
+  ],
+  "generalization_gaps": {
+    "small": {
+      "energy_gap_pct": -30.933418208829444,
+      "acceptance_gap_pct": -39.754816112084065,
+      "sla_gap_pct": -2.1172525192015548,
+      "reward_gap_pct": -117.99143717965215
+    },
+    "large": {
+      "energy_gap_pct": 24.877766958142264,
+      "acceptance_gap_pct": 24.08056042031525,
+      "sla_gap_pct": -0.9457377527058315,
+      "reward_gap_pct": 70.8500437143478
+    },
+    "enterprise": {
+      "energy_gap_pct": 37.2412141660622,
+      "acceptance_gap_pct": 32.39929947460597,
+      "sla_gap_pct": -0.08201788330582892,
+      "reward_gap_pct": 95.85132770704826
+    },
+    "high_load": {
+      "energy_gap_pct": -68.35090428974215,
+      "acceptance_gap_pct": -38.09106830122592,
+      "sla_gap_pct": -0.14118247151302124,
+      "reward_gap_pct": -114.18816964117396
+    },
+    "stress_test": {
+      "energy_gap_pct": -65.21646431813136,
+      "acceptance_gap_pct": -68.56392294220666,
+      "sla_gap_pct": -2.2563442866185097,
+      "reward_gap_pct": -205.83634647767943
+    }
+  },
+  "average_gaps": {
+    "avg_energy_gap_pct": -20.476361138499698,
+    "avg_acceptance_gap_pct": -17.985989492119085,
+    "avg_sla_gap_pct": -1.1085069826689493,
+    "avg_reward_gap_pct": -54.2629163754219
+  },
+  "model_path": "/home/anmak/ml-cloud-provisioning/results/academic/models/generalization/model_trained_on_medium.pth"
+}
