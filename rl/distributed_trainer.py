@@ -234,7 +234,8 @@ class DistributedPPOTrainer:
 
         if self.is_distributed:
             if not dist.is_initialized():
-                dist.init_process_group(backend='nccl')
+                backend = os.environ.get('DISTRIBUTED_BACKEND', 'nccl')
+                dist.init_process_group(backend=backend)
             self.device = torch.device(f'cuda:{self.local_rank}')
             torch.cuda.set_device(self.local_rank)
         else:
