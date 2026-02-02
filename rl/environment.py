@@ -112,7 +112,8 @@ class CloudProvisioningEnv:
         seed: Optional[int] = None,
         exec_time_noise: float = 0.0,
         energy_noise: float = 0.0,
-        task_arrival_noise: float = 0.0
+        task_arrival_noise: float = 0.0,
+        reward_config: Optional[Dict[str, Any]] = None
     ):
         """
         Initialize environment.
@@ -127,6 +128,7 @@ class CloudProvisioningEnv:
             exec_time_noise: Execution time noise factor (0.0-0.5, e.g., 0.15 = ±15%)
             energy_noise: Energy estimation noise factor (0.0-0.5)
             task_arrival_noise: Task characteristic noise factor (0.0-0.3)
+            reward_config: Optional dict of RewardCalculator parameters
         """
         if hw_configs:
             self.hw_configs = hw_configs
@@ -137,7 +139,7 @@ class CloudProvisioningEnv:
         self.episode_length = max_steps
         self.experiences = experiences
         self.experience_idx = 0
-        self.reward_calculator = RewardCalculator()
+        self.reward_calculator = RewardCalculator(**(reward_config or {}))
 
         self.exec_time_noise = max(0.0, min(0.5, exec_time_noise))
         self.energy_noise = max(0.0, min(0.5, energy_noise))
@@ -233,6 +235,10 @@ class CloudProvisioningEnv:
                     hw_state['running_tasks'] += 1
                     self.accepted_count += 1
 
+                    accs_needed = task.num_vms if task.requires_accelerator else 0
+                    if accs_needed > 0:
+                        hw_state['available_accelerators'] -= accs_needed
+
                     cfg = next(c for c in self.hw_configs if c.hw_type_id == action)
                     exec_time = self._estimate_exec_time(task, cfg)
                     energy = self._estimate_energy(task, cfg, exec_time)
@@ -242,6 +248,7 @@ class CloudProvisioningEnv:
                         'hw_type_id': action,
                         'cpus': cpus_needed,
                         'memory': mem_needed,
+                        'accelerators': accs_needed,
                         'remaining_time': exec_time,
                         'energy': energy
                     })
@@ -485,6 +492,7 @@ class CloudProvisioningEnv:
             hw = self.hw_states[task['hw_type_id']]
             hw['available_cpus'] += task['cpus']
             hw['available_memory'] += task['memory']
+            hw['available_accelerators'] += task.get('accelerators', 0)
             hw['running_tasks'] -= 1
 
         for hw_id, hw in self.hw_states.items():

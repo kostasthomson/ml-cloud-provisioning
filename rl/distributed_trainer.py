@@ -436,6 +436,7 @@ class DistributedPPOTrainer:
         domain_randomization: bool = False,
         domain_preset: str = 'mixed_capacity',
         curriculum: bool = False,
+        reward_config: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, Any]:
         """
         Run training loop.
@@ -450,6 +451,7 @@ class DistributedPPOTrainer:
             domain_randomization: If True, sample from multiple presets
             domain_preset: Named preset group for domain randomization
             curriculum: If True, use curriculum learning (easier presets after harder)
+            reward_config: Optional dict of RewardCalculator parameters
         """
         timesteps_per_process = total_timesteps // self.world_size
 
@@ -458,10 +460,11 @@ class DistributedPPOTrainer:
                 num_envs,
                 domain_randomization=True,
                 domain_preset=domain_preset,
-                curriculum=curriculum
+                curriculum=curriculum,
+                reward_config=reward_config
             )
         else:
-            vec_env = VectorizedEnv(num_envs, preset=env_preset)
+            vec_env = VectorizedEnv(num_envs, preset=env_preset, reward_config=reward_config)
         vec_env.reset(seed=self.rank * 10000)
 
         if self.is_main_process:

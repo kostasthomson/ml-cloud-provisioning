@@ -16,7 +16,8 @@ class RewardCalculator:
     Reward components (aggressive energy focus):
     - Energy efficiency: Strong negative reward proportional to energy consumed
     - SLA compliance: Bonus for meeting deadlines, penalty for violations
-    - Rejection penalty: Moderate penalty for rejecting tasks
+    - Rejection penalty: Scarcity-aware penalty for rejecting tasks
+    - Acceptance bonus: Scarcity-aware bonus for accepting tasks
     - Efficiency bonus: Extra reward for low-energy allocations
     """
 
@@ -29,7 +30,10 @@ class RewardCalculator:
         normalize_energy: bool = True,
         energy_baseline: float = 0.05,
         energy_excellent_threshold: float = 0.03,
-        energy_poor_threshold: float = 0.08
+        energy_poor_threshold: float = 0.08,
+        scarcity_aware: bool = True,
+        scarcity_rejection_scale: float = 1.5,
+        scarcity_acceptance_scale: float = 2.0
     ):
         self.energy_weight = energy_weight
         self.sla_weight = sla_weight
@@ -39,6 +43,9 @@ class RewardCalculator:
         self.energy_baseline = energy_baseline
         self.energy_excellent_threshold = energy_excellent_threshold
         self.energy_poor_threshold = energy_poor_threshold
+        self.scarcity_aware = scarcity_aware
+        self.scarcity_rejection_scale = scarcity_rejection_scale
+        self.scarcity_acceptance_scale = scarcity_acceptance_scale
         self._running_energy_sum = 0.0
         self._running_energy_count = 0
         self._running_energy_sq_sum = 0.0
@@ -56,12 +63,25 @@ class RewardCalculator:
             state: Optional RLState for context-aware rewards
 
         Returns:
-            Float reward value (typically in range [-2, 1])
+            Float reward value (typically in range [-2, 2])
         """
-        if not outcome.accepted:
-            return -self.rejection_penalty
+        scarcity = self._compute_scarcity(state) if state and self.scarcity_aware else 0.5
 
-        reward = self.acceptance_bonus
+        if not outcome.accepted:
+            base_penalty = self.rejection_penalty
+            if self.scarcity_aware and state:
+                available_capacity = 1.0 - scarcity
+                penalty_scale = 1.0 + available_capacity * (self.scarcity_rejection_scale - 1.0)
+                return -base_penalty * penalty_scale
+            return -base_penalty
+
+        base_bonus = self.acceptance_bonus
+        if self.scarcity_aware:
+            bonus_scale = 1.0 + scarcity * (self.scarcity_acceptance_scale - 1.0)
+            reward = base_bonus * bonus_scale
+        else:
+            reward = base_bonus
+
         energy = outcome.energy_consumed_kwh
 
         self._update_running_stats(energy)
@@ -87,7 +107,31 @@ class RewardCalculator:
         else:
             reward += self.sla_weight * 0.2
 
-        return max(-2.0, min(2.0, reward))
+        return max(-2.5, min(2.5, reward))
+
+    def _compute_scarcity(self, state: RLState) -> float:
+        """
+        Compute resource scarcity from state (0 = abundant, 1 = scarce).
+
+        High scarcity means resources are running low, so accepting tasks
+        under scarcity should be rewarded more, and rejecting when resources
+        are available should be penalized more.
+        """
+        if not state or not state.hw_types:
+            return 0.5
+
+        cpu_utils = []
+        mem_utils = []
+        for hw in state.hw_types:
+            cpu_utils.append(hw.utilization_cpu)
+            mem_utils.append(hw.utilization_memory)
+
+        avg_cpu_util = sum(cpu_utils) / len(cpu_utils) if cpu_utils else 0.5
+        avg_mem_util = sum(mem_utils) / len(mem_utils) if mem_utils else 0.5
+
+        scarcity = max(avg_cpu_util, avg_mem_util)
+
+        return min(1.0, max(0.0, scarcity))
 
     def _update_running_stats(self, energy_kwh: float):
         """Update running statistics for adaptive normalization."""
@@ -169,6 +213,9 @@ class RewardCalculator:
             "energy_baseline": self.energy_baseline,
             "energy_excellent_threshold": self.energy_excellent_threshold,
             "energy_poor_threshold": self.energy_poor_threshold,
+            "scarcity_aware": self.scarcity_aware,
+            "scarcity_rejection_scale": self.scarcity_rejection_scale,
+            "scarcity_acceptance_scale": self.scarcity_acceptance_scale,
             "running_energy_mean": self.get_running_mean(),
             "running_energy_std": self.get_running_std()
         }

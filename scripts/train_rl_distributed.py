@@ -83,6 +83,14 @@ Examples:
                         help='Domain randomization preset group (default: mixed_capacity)')
     parser.add_argument('--curriculum', action='store_true',
                         help='Enable curriculum learning (start with harder presets)')
+    parser.add_argument('--scarcity-aware', action='store_true', default=True,
+                        help='Enable scarcity-aware rewards (default: True)')
+    parser.add_argument('--rejection-penalty', type=float, default=0.8,
+                        help='Base rejection penalty (default: 0.8)')
+    parser.add_argument('--scarcity-rejection-scale', type=float, default=1.5,
+                        help='Rejection penalty scale when resources available (default: 1.5)')
+    parser.add_argument('--scarcity-acceptance-scale', type=float, default=2.0,
+                        help='Acceptance bonus scale under scarcity (default: 2.0)')
 
     args = parser.parse_args()
 
@@ -105,7 +113,15 @@ Examples:
             logger.info(f"Curriculum learning: {args.curriculum}")
         else:
             logger.info(f"Environment preset: {args.env_preset}")
+        logger.info(f"Scarcity-aware rewards: {args.scarcity_aware}")
         logger.info("=" * 60)
+
+    reward_config = {
+        'scarcity_aware': args.scarcity_aware,
+        'rejection_penalty': args.rejection_penalty,
+        'scarcity_rejection_scale': args.scarcity_rejection_scale,
+        'scarcity_acceptance_scale': args.scarcity_acceptance_scale,
+    }
 
     try:
         trainer = DistributedPPOTrainer(
@@ -127,6 +143,7 @@ Examples:
             domain_randomization=args.domain_randomization,
             domain_preset=args.domain_preset,
             curriculum=args.curriculum,
+            reward_config=reward_config,
         )
 
         if trainer.is_main_process:
