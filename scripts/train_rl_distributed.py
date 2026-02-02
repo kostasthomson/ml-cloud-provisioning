@@ -83,8 +83,8 @@ Examples:
                         help='Domain randomization preset group (default: mixed_capacity)')
     parser.add_argument('--curriculum', action='store_true',
                         help='Enable curriculum learning (start with harder presets)')
-    parser.add_argument('--scarcity-aware', action='store_true', default=True,
-                        help='Enable scarcity-aware rewards (default: True)')
+    parser.add_argument('--scarcity-aware', action='store_true',
+                        help='Enable scarcity-aware rewards (default: disabled, proven harmful in V5/V6)')
     parser.add_argument('--rejection-penalty', type=float, default=0.8,
                         help='Base rejection penalty (default: 0.8)')
     parser.add_argument('--scarcity-rejection-scale', type=float, default=1.5,

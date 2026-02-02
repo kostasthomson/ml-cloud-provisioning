@@ -447,6 +447,11 @@ class CloudProvisioningEnv:
         """Estimate execution time for task on HW type with optional stochastic noise."""
         if task.requires_accelerator and cfg.accelerator_compute > 0:
             compute = cfg.accelerator_compute * task.num_vms * task.accelerator_rho
+        elif cfg.accelerator_compute > 0 and task.instructions > 1e11:
+            gpu_efficiency = 0.3
+            cpu_compute = cfg.compute_capability * task.num_vms * task.vcpus_per_vm
+            gpu_boost = cfg.accelerator_compute * task.num_vms * gpu_efficiency
+            compute = cpu_compute + gpu_boost
         else:
             compute = cfg.compute_capability * task.num_vms * task.vcpus_per_vm
 

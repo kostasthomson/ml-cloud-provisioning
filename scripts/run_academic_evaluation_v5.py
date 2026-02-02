@@ -30,12 +30,17 @@ Output Structure:
     ├── logs/
     │   └── train_logs.txt
     ├── data/
-    │   ├── training_results.json
-    │   ├── generalization_results.json
-    │   └── utilization_summary.json
+    │   ├── training_results.json       # Training config and summary
+    │   ├── generalization_results.json # Aggregated per-preset metrics
+    │   ├── utilization_summary.json    # Utilization analysis summary
+    │   └── raw/                        # Raw data for reproducibility
+    │       ├── training_curves.csv     # Per-episode rewards and losses
+    │       ├── episode_summary.csv     # Per-episode evaluation metrics
+    │       ├── decision_log.csv        # All task decisions with utilization
+    │       └── v4_comparison.csv       # Comparison with v4 baseline (if provided)
     ├── figures/
-    │   ├── training_curves.png
-    │   ├── {preset}_utilization.png
+    │   ├── training_summary.png
+    │   ├── utilization_{preset}_episode_0.png
     │   ├── comparative_utilization.png
     │   └── rejection_analysis.png
     ├── latex/
@@ -91,11 +96,12 @@ class OutputManager:
         self.models_dir = self.base_dir / 'models'
         self.logs_dir = self.base_dir / 'logs'
         self.data_dir = self.base_dir / 'data'
+        self.raw_dir = self.base_dir / 'data' / 'raw'
         self.figures_dir = self.base_dir / 'figures'
         self.latex_dir = self.base_dir / 'latex'
 
         for d in [self.models_dir, self.logs_dir, self.data_dir,
-                  self.figures_dir, self.latex_dir]:
+                  self.raw_dir, self.figures_dir, self.latex_dir]:
             d.mkdir(parents=True, exist_ok=True)
 
     def save_json(self, data: Dict, filename: str, subdir: str = 'data'):
@@ -104,6 +110,21 @@ class OutputManager:
         with open(path, 'w') as f:
             json.dump(data, f, indent=2, default=float)
         logger.info(f"Saved: {path}")
+        return path
+
+    def save_csv(self, rows: List[Dict], filename: str, subdir: str = 'raw'):
+        import csv
+        target_dir = getattr(self, f'{subdir}_dir', self.raw_dir)
+        path = target_dir / filename
+        if not rows:
+            logger.warning(f"No data to save: {filename}")
+            return None
+        fieldnames = list(rows[0].keys())
+        with open(path, 'w', newline='', encoding='utf-8') as f:
+            writer = csv.DictWriter(f, fieldnames=fieldnames)
+            writer.writeheader()
+            writer.writerows(rows)
+        logger.info(f"Saved CSV: {path} ({len(rows)} rows)")
         return path
 
     def save_latex_table(self, content: str, filename: str):
@@ -216,6 +237,24 @@ def train_distributed(
             f.write(f"Training Time: {training_time:.1f}s\n")
             f.write(f"Throughput: {results['fps']:.0f} steps/sec\n")
 
+        metrics = results.get('metrics', {})
+        episode_rewards = metrics.get('episode_rewards', [])
+        policy_losses = metrics.get('policy_losses', [])
+        value_losses = metrics.get('value_losses', [])
+        entropy_losses = metrics.get('entropy_losses', [])
+
+        if episode_rewards:
+            training_curves_rows = []
+            for i, reward in enumerate(episode_rewards):
+                training_curves_rows.append({
+                    'episode': i + 1,
+                    'reward': reward,
+                    'policy_loss': policy_losses[i] if i < len(policy_losses) else None,
+                    'value_loss': value_losses[i] if i < len(value_losses) else None,
+                    'entropy_loss': entropy_losses[i] if i < len(entropy_losses) else None,
+                })
+            output.save_csv(training_curves_rows, 'training_curves.csv')
+
     return training_results
 
 
@@ -237,6 +276,8 @@ def evaluate_generalization(
     from scripts.utilization_analysis import UtilizationTracker
 
     results = {}
+    all_episode_rows = []
+    all_decision_rows = []
 
     for preset in presets:
         logger.info(f"  Evaluating: {preset}")
@@ -248,6 +289,47 @@ def evaluate_generalization(
         for ep in range(episodes_per_preset):
             metrics = tracker.run_episode(ep, max_steps)
             metrics_list.append(metrics)
+
+            all_episode_rows.append({
+                'preset': preset,
+                'episode': ep,
+                'total_accepted': metrics.total_accepted,
+                'total_rejected': metrics.total_rejected,
+                'acceptance_rate': metrics.final_acceptance_rate,
+                'total_energy_kwh': metrics.total_energy_kwh,
+                'capacity_rejections': metrics.capacity_rejections,
+                'policy_rejections': metrics.policy_rejections,
+                'sla_violations': metrics.sla_violations,
+            })
+
+            for step in metrics.steps:
+                hw_utils = step.hw_utilizations
+                row = {
+                    'preset': preset,
+                    'episode': ep,
+                    'step': step.step,
+                    'timestamp': step.timestamp,
+                    'task_id': step.task_id,
+                    'action': step.action,
+                    'accepted': step.accepted,
+                    'rejection_reason': step.rejection_reason,
+                    'energy_kwh': step.energy_kwh,
+                    'cumulative_energy_kwh': step.cumulative_energy_kwh,
+                    'cumulative_acceptance_rate': step.cumulative_acceptance_rate,
+                    'task_num_vms': step.task_requirements.get('num_vms', 0),
+                    'task_vcpus': step.task_requirements.get('vcpus_per_vm', 0),
+                    'task_memory': step.task_requirements.get('memory_per_vm', 0),
+                    'task_total_cpu_req': step.task_requirements.get('total_cpu_req', 0),
+                    'task_total_mem_req': step.task_requirements.get('total_mem_req', 0),
+                }
+                for hw_id, utils in hw_utils.items():
+                    row[f'hw{hw_id}_cpu_util'] = utils.get('cpu', 0)
+                    row[f'hw{hw_id}_mem_util'] = utils.get('memory', 0)
+                    row[f'hw{hw_id}_acc_util'] = utils.get('accelerator', 0)
+                    row[f'hw{hw_id}_avail_cpus'] = utils.get('available_cpus', 0)
+                    row[f'hw{hw_id}_avail_mem'] = utils.get('available_memory', 0)
+                    row[f'hw{hw_id}_running_tasks'] = utils.get('running_tasks', 0)
+                all_decision_rows.append(row)
 
         total_accepted = sum(m.total_accepted for m in metrics_list)
         total_rejected = sum(m.total_rejected for m in metrics_list)
@@ -276,6 +358,9 @@ def evaluate_generalization(
                    f"Policy Rej%: {results[preset]['policy_rejection_pct']:.1f}%")
 
     output.save_json(results, 'generalization_results.json')
+    output.save_csv(all_episode_rows, 'episode_summary.csv')
+    output.save_csv(all_decision_rows, 'decision_log.csv')
+
     return results
 
 
@@ -421,21 +506,38 @@ def generate_final_report(
 
     if v4_baseline:
         improvements = {}
+        comparison_rows = []
         for preset in EVAL_PRESETS:
             if preset in generalization_results and preset in v4_baseline:
                 v4_acc = v4_baseline[preset].get('avg_acceptance_rate',
                          v4_baseline[preset].get('acceptance_rate', 0))
                 v5_acc = generalization_results[preset]['acceptance_rate']
+                v4_energy = v4_baseline[preset].get('avg_energy_kwh', 0)
+                v5_energy = generalization_results[preset]['avg_energy_kwh']
+                abs_imp = v5_acc - v4_acc
+                rel_imp = ((v5_acc - v4_acc) / max(v4_acc, 0.01)) * 100
+
                 improvements[preset] = {
                     'v4_acceptance': v4_acc,
                     'v5_acceptance': v5_acc,
-                    'absolute_improvement': v5_acc - v4_acc,
-                    'relative_improvement_pct': ((v5_acc - v4_acc) / max(v4_acc, 0.01)) * 100,
+                    'absolute_improvement': abs_imp,
+                    'relative_improvement_pct': rel_imp,
                 }
+                comparison_rows.append({
+                    'preset': preset,
+                    'v4_acceptance': v4_acc,
+                    'v5_acceptance': v5_acc,
+                    'v4_energy_kwh': v4_energy,
+                    'v5_energy_kwh': v5_energy,
+                    'abs_improvement': abs_imp,
+                    'rel_improvement_pct': rel_imp,
+                })
         report['v4_comparison'] = improvements
 
         avg_improvement = np.mean([v['relative_improvement_pct'] for v in improvements.values()])
         report['avg_improvement_pct'] = avg_improvement
+
+        output.save_csv(comparison_rows, 'v4_comparison.csv')
 
     output.save_json(report, 'evaluation_report.json', 'base')
 
@@ -493,8 +595,8 @@ def main():
     parser.add_argument('--curriculum', action='store_true',
                         help='Enable curriculum learning')
 
-    parser.add_argument('--scarcity-aware', action='store_true', default=True,
-                        help='Enable scarcity-aware rewards (default: True)')
+    parser.add_argument('--scarcity-aware', action='store_true',
+                        help='Enable scarcity-aware rewards (default: disabled, proven harmful in V5/V6)')
     parser.add_argument('--scarcity-rejection-scale', type=float, default=1.5,
                         help='Rejection penalty scale when resources available')
     parser.add_argument('--scarcity-acceptance-scale', type=float, default=2.0,
