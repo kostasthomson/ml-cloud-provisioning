@@ -279,7 +279,7 @@ def print_report(all_stats: Dict, comparison: Dict, presets: List[str]):
     scarcity_diffs = comparison['feature_differences'].get('scarcity', {})
     for fname, data in scarcity_diffs.items():
         spread = data['spread']
-        status = "✓ GOOD" if spread > 0.1 else "⚠ LOW" if spread > 0.05 else "✗ POOR"
+        status = "[GOOD]" if spread > 0.1 else "[LOW]" if spread > 0.05 else "[POOR]"
         print(f"  {fname}:")
         for preset in presets:
             mean = data['means'][preset]
@@ -291,7 +291,7 @@ def print_report(all_stats: Dict, comparison: Dict, presets: List[str]):
     print("\n### WARNINGS AND ISSUES ###\n")
     if comparison['warnings']:
         for warning in comparison['warnings']:
-            print(f"  ⚠ {warning}")
+            print(f"  [!] {warning}")
     else:
         print("  No critical issues detected.")
 

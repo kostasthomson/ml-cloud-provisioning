@@ -443,6 +443,7 @@ class DistributedPPOTrainer:
         domain_preset: str = 'mixed_capacity',
         curriculum: bool = False,
         reward_config: Optional[Dict[str, Any]] = None,
+        checkpoint_interval: int = 50000,
     ) -> Dict[str, Any]:
         """
         Run training loop.
@@ -458,6 +459,7 @@ class DistributedPPOTrainer:
             domain_preset: Named preset group for domain randomization
             curriculum: If True, use curriculum learning (easier presets after harder)
             reward_config: Optional dict of RewardCalculator parameters
+            checkpoint_interval: Save checkpoint every N global timesteps (default: 50000)
         """
         timesteps_per_process = total_timesteps // self.world_size
 
@@ -501,7 +503,9 @@ class DistributedPPOTrainer:
 
         start_time = time.time()
         last_log_step = 0
+        last_checkpoint_step = 0
         update_count = 0
+        checkpoint_interval_per_process = checkpoint_interval // self.world_size
 
         while self.current_timestep < timesteps_per_process:
             steps, ep_rewards = self.collect_rollouts(vec_env, rollout_steps)
@@ -534,6 +538,13 @@ class DistributedPPOTrainer:
 
                 last_log_step = self.current_timestep
 
+            if save_path and self.is_main_process:
+                if (self.current_timestep - last_checkpoint_step) >= checkpoint_interval_per_process:
+                    checkpoint_path = str(Path(save_path).with_suffix('')) + f'_checkpoint_{self.current_timestep * self.world_size}.pth'
+                    if self.save(checkpoint_path, is_checkpoint=True):
+                        last_checkpoint_step = self.current_timestep
+                        print(f"[CHECKPOINT] Saved at step {self.current_timestep * self.world_size:,}")
+
         print(f"[GPU {self.rank}] Training complete - {self.current_timestep:,} steps, "
               f"{self.episodes_completed} episodes")
 
@@ -545,8 +556,18 @@ class DistributedPPOTrainer:
 
         total_episodes = int(self._gather_scalar(float(self.episodes_completed)))
 
+        save_success = False
         if self.is_main_process and save_path:
-            self.save(save_path)
+            save_success = self.save(save_path)
+            if not save_success:
+                checkpoint_pattern = str(Path(save_path).with_suffix('')) + '_checkpoint_*.pth'
+                import glob
+                checkpoints = sorted(glob.glob(checkpoint_pattern))
+                if checkpoints:
+                    latest_checkpoint = checkpoints[-1]
+                    print(f"[WARNING] Final save failed. Latest checkpoint: {latest_checkpoint}")
+                else:
+                    print("[ERROR] Final save failed and no checkpoints available!")
 
         if self.is_main_process:
             print("=" * 70)
@@ -577,8 +598,8 @@ class DistributedPPOTrainer:
 
         return results
 
-    def save(self, path: str):
-        """Save model checkpoint."""
+    def save(self, path: str, is_checkpoint: bool = False):
+        """Save model checkpoint with error handling and retry logic."""
         policy_module = self._get_policy_module()
 
         save_dict = {
@@ -593,15 +614,46 @@ class DistributedPPOTrainer:
             'last_training_reward': np.mean(self.metrics.episode_rewards[-100:]) if self.metrics.episode_rewards else 0,
             'distributed_training': self.is_distributed,
             'world_size': self.world_size,
+            'use_capacity_features': self.use_capacity_features,
         }
 
         Path(path).parent.mkdir(parents=True, exist_ok=True)
-        torch.save(save_dict, path)
-        logger.info(f"Model saved to {path}")
 
-        metrics_path = Path(path).with_suffix('.metrics.json')
-        with open(metrics_path, 'w') as f:
-            json.dump(self.metrics.to_dict(), f)
+        max_retries = 3
+        for attempt in range(max_retries):
+            try:
+                temp_path = path + '.tmp'
+                torch.save(save_dict, temp_path)
+
+                if Path(path).exists():
+                    Path(path).unlink()
+                Path(temp_path).rename(path)
+
+                log_msg = f"Checkpoint saved to {path}" if is_checkpoint else f"Model saved to {path}"
+                logger.info(log_msg)
+
+                if not is_checkpoint:
+                    metrics_path = Path(path).with_suffix('.metrics.json')
+                    with open(metrics_path, 'w') as f:
+                        json.dump(self.metrics.to_dict(), f)
+
+                return True
+
+            except (RuntimeError, OSError) as e:
+                logger.warning(f"Save attempt {attempt + 1}/{max_retries} failed: {e}")
+                if attempt < max_retries - 1:
+                    import time as time_module
+                    time_module.sleep(1)
+                else:
+                    logger.error(f"Failed to save model after {max_retries} attempts: {e}")
+                    if Path(temp_path).exists():
+                        try:
+                            Path(temp_path).unlink()
+                        except:
+                            pass
+                    return False
+
+        return False
 
     def load(self, path: str):
         """Load model checkpoint."""

@@ -93,6 +93,8 @@ Examples:
                         help='Acceptance bonus scale under scarcity (default: 2.0)')
     parser.add_argument('--use-capacity-features', action='store_true',
                         help='Enable v3 capacity scale features (addresses scale blindness)')
+    parser.add_argument('--checkpoint-interval', type=int, default=50000,
+                        help='Save checkpoint every N global timesteps (default: 50000)')
 
     args = parser.parse_args()
 
@@ -148,6 +150,7 @@ Examples:
             domain_preset=args.domain_preset,
             curriculum=args.curriculum,
             reward_config=reward_config,
+            checkpoint_interval=args.checkpoint_interval,
         )
 
         if trainer.is_main_process:

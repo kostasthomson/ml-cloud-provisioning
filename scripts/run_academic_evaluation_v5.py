@@ -177,6 +177,7 @@ def train_distributed(
         domain_preset=domain_preset,
         curriculum=curriculum,
         reward_config=reward_config,
+        checkpoint_interval=50000,
     )
     training_time = time.time() - start_time
 
