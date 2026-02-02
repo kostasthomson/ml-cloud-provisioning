@@ -1,0 +1,6 @@
+Training completed: 2026-02-02T16:30:12.144083
+Timesteps: 507904
+Episodes: 56
+Avg Reward: -57.9454
+Training Time: 6187.6s
+Throughput: 82 steps/sec

@@ -1,0 +1,171 @@
+{
+  "version": "v5",
+  "timestamp": "2026-02-02T16:31:53.190672",
+  "training": {
+    "timesteps": 507904,
+    "episodes": 56,
+    "avg_reward": -57.94542577737819,
+    "training_time_sec": 6187.604752540588,
+    "fps": 82.08480612964519,
+    "model_path": "results/academic_v6/models/model_v5.pth",
+    "config": {
+      "domain_preset": "mixed_capacity",
+      "curriculum": true,
+      "scarcity_aware": true,
+      "scarcity_rejection_scale": 1.2,
+      "scarcity_acceptance_scale": 1.5,
+      "lr": 0.0003,
+      "batch_size": 64,
+      "epochs": 10,
+      "gamma": 0.99,
+      "num_envs": 8
+    }
+  },
+  "generalization": {
+    "small": {
+      "acceptance_rate": 0.3242,
+      "avg_energy_kwh": 0.13169733911802095,
+      "std_energy_kwh": 0.010920972934032292,
+      "energy_per_task": 0.000814739730312837,
+      "total_tasks": 5000,
+      "total_accepted": 1621,
+      "total_rejected": 3379,
+      "capacity_rejections": 1316,
+      "policy_rejections": 2063,
+      "capacity_rejection_ratio": 0.38946433856170465,
+      "policy_rejection_pct": 61.05356614382954
+    },
+    "medium": {
+      "acceptance_rate": 0.5028,
+      "avg_energy_kwh": 0.3477107035562803,
+      "std_energy_kwh": 0.03768203103665689,
+      "energy_per_task": 0.0013879321264477266,
+      "total_tasks": 5000,
+      "total_accepted": 2514,
+      "total_rejected": 2486,
+      "capacity_rejections": 1351,
+      "policy_rejections": 1135,
+      "capacity_rejection_ratio": 0.5434432823813354,
+      "policy_rejection_pct": 45.65567176186645
+    },
+    "large": {
+      "acceptance_rate": 0.6528,
+      "avg_energy_kwh": 0.5345366804955305,
+      "std_energy_kwh": 0.028506086856299177,
+      "energy_per_task": 0.001638721825351119,
+      "total_tasks": 5000,
+      "total_accepted": 3264,
+      "total_rejected": 1736,
+      "capacity_rejections": 1285,
+      "policy_rejections": 451,
+      "capacity_rejection_ratio": 0.7402073732718893,
+      "policy_rejection_pct": 25.97926267281106
+    },
+    "high_load": {
+      "acceptance_rate": 0.2616,
+      "avg_energy_kwh": 0.14175068389476833,
+      "std_energy_kwh": 0.018600954572704893,
+      "energy_per_task": 0.0010958834073920831,
+      "total_tasks": 5000,
+      "total_accepted": 1308,
+      "total_rejected": 3692,
+      "capacity_rejections": 1454,
+      "policy_rejections": 2238,
+      "capacity_rejection_ratio": 0.3938244853737812,
+      "policy_rejection_pct": 60.61755146262189
+    },
+    "stress_test": {
+      "acceptance_rate": 0.1308,
+      "avg_energy_kwh": 0.06272683837917392,
+      "std_energy_kwh": 0.013247666629798809,
+      "energy_per_task": 0.000959701916798343,
+      "total_tasks": 5000,
+      "total_accepted": 654,
+      "total_rejected": 4346,
+      "capacity_rejections": 1289,
+      "policy_rejections": 3057,
+      "capacity_rejection_ratio": 0.2965945697192821,
+      "policy_rejection_pct": 70.34054302807179
+    }
+  },
+  "utilization": {
+    "small": {
+      "avg_acceptance_rate": 0.32720000000000005,
+      "std_acceptance_rate": 0.010476640682967027,
+      "avg_energy_kwh": 0.132760819896329,
+      "std_energy_kwh": 0.011716707569755284,
+      "avg_capacity_rejections": 131.0,
+      "avg_policy_rejections": 205.4,
+      "capacity_rejection_ratio": 0.38958584122438655
+    },
+    "medium": {
+      "avg_acceptance_rate": 0.48919999999999997,
+      "std_acceptance_rate": 0.01769067550999678,
+      "avg_energy_kwh": 0.3244300301149382,
+      "std_energy_kwh": 0.03751851787452681,
+      "avg_capacity_rejections": 139.4,
+      "avg_policy_rejections": 116.0,
+      "capacity_rejection_ratio": 0.5469715104507367
+    },
+    "large": {
+      "avg_acceptance_rate": 0.6656,
+      "std_acceptance_rate": 0.00542586398650022,
+      "avg_energy_kwh": 0.5512895349821404,
+      "std_energy_kwh": 0.01906780610504364,
+      "avg_capacity_rejections": 124.4,
+      "avg_policy_rejections": 42.8,
+      "capacity_rejection_ratio": 0.7442599467064774
+    },
+    "high_load": {
+      "avg_acceptance_rate": 0.2572,
+      "std_acceptance_rate": 0.01970177656963961,
+      "avg_energy_kwh": 0.14331205140779785,
+      "std_energy_kwh": 0.019185571206150175,
+      "avg_capacity_rejections": 145.0,
+      "avg_policy_rejections": 226.4,
+      "capacity_rejection_ratio": 0.39092856385457714
+    },
+    "stress_test": {
+      "avg_acceptance_rate": 0.13040000000000002,
+      "std_acceptance_rate": 0.006374950980203696,
+      "avg_energy_kwh": 0.05625133765584569,
+      "std_energy_kwh": 0.011928138743751135,
+      "avg_capacity_rejections": 130.6,
+      "avg_policy_rejections": 304.2,
+      "capacity_rejection_ratio": 0.30032616345445773
+    }
+  },
+  "v4_comparison": {
+    "small": {
+      "v4_acceptance": 0.3096,
+      "v5_acceptance": 0.3242,
+      "absolute_improvement": 0.014600000000000002,
+      "relative_improvement_pct": 4.7157622739018095
+    },
+    "medium": {
+      "v4_acceptance": 0.5064,
+      "v5_acceptance": 0.5028,
+      "absolute_improvement": -0.0035999999999999366,
+      "relative_improvement_pct": -0.7109004739336369
+    },
+    "large": {
+      "v4_acceptance": 0.6528,
+      "v5_acceptance": 0.6528,
+      "absolute_improvement": 0.0,
+      "relative_improvement_pct": 0.0
+    },
+    "high_load": {
+      "v4_acceptance": 0.27,
+      "v5_acceptance": 0.2616,
+      "absolute_improvement": -0.008400000000000019,
+      "relative_improvement_pct": -3.111111111111118
+    },
+    "stress_test": {
+      "v4_acceptance": 0.132,
+      "v5_acceptance": 0.1308,
+      "absolute_improvement": -0.0012000000000000066,
+      "relative_improvement_pct": -0.9090909090909141
+    }
+  },
+  "avg_improvement_pct": -0.003068044046771856
+}
