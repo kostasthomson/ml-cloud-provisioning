@@ -16,6 +16,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.optim as optim
+from torch.optim.lr_scheduler import CosineAnnealingLR
 import torch.distributed as dist
 from torch.nn.parallel import DistributedDataParallel as DDP
 from typing import Optional, List, Dict, Tuple, Any
@@ -216,13 +217,19 @@ class DistributedPPOTrainer:
         n_epochs: int = 10,
         batch_size: int = 64,
         use_capacity_features: bool = False,
+        entropy_coef_start: float = 0.05,
+        entropy_coef_end: float = 0.001,
+        lr_min: float = 1e-5,
     ):
         self.learning_rate = learning_rate
         self.gamma = gamma
         self.gae_lambda = gae_lambda
         self.clip_range = clip_range
         self.value_loss_coef = value_loss_coef
-        self.entropy_coef = entropy_coef
+        self.entropy_coef = entropy_coef_start
+        self.entropy_coef_start = entropy_coef_start
+        self.entropy_coef_end = entropy_coef_end
+        self.lr_min = lr_min
         self.max_grad_norm = max_grad_norm
         self.n_epochs = n_epochs
         self.batch_size = batch_size
@@ -257,6 +264,9 @@ class DistributedPPOTrainer:
             self.policy = DDP(self.policy, device_ids=[self.local_rank])
 
         self.optimizer = optim.Adam(self.policy.parameters(), lr=learning_rate)
+        self.scheduler = None
+        self.total_updates = 0
+        self.total_updates_estimate = 1
         self.buffer = RolloutBuffer(gamma=gamma, gae_lambda=gae_lambda)
         self.metrics = TrainingMetrics()
 
@@ -406,10 +416,20 @@ class DistributedPPOTrainer:
 
         self.buffer.clear()
 
+        self.total_updates += 1
+        if self.scheduler is not None:
+            self.scheduler.step()
+        progress = min(self.total_updates / max(self.total_updates_estimate, 1), 1.0)
+        self.entropy_coef = self.entropy_coef_start + (self.entropy_coef_end - self.entropy_coef_start) * progress
+
+        current_lr = self.optimizer.param_groups[0]['lr']
+
         stats = {
             'policy_loss': total_policy_loss / max(n_updates, 1),
             'value_loss': total_value_loss / max(n_updates, 1),
             'entropy': total_entropy_loss / max(n_updates, 1),
+            'lr': current_lr,
+            'entropy_coef': self.entropy_coef,
         }
 
         self.metrics.policy_losses.append(stats['policy_loss'])
@@ -463,6 +483,11 @@ class DistributedPPOTrainer:
         """
         timesteps_per_process = total_timesteps // self.world_size
 
+        self.total_updates_estimate = max(timesteps_per_process // (rollout_steps * num_envs), 1)
+        self.scheduler = CosineAnnealingLR(
+            self.optimizer, T_max=self.total_updates_estimate, eta_min=self.lr_min
+        )
+
         if domain_randomization:
             vec_env = VectorizedEnv(
                 num_envs,
@@ -487,7 +512,9 @@ class DistributedPPOTrainer:
             print(f"  Rollout steps:        {rollout_steps}")
             print(f"  Batch size:           {self.batch_size}")
             print(f"  PPO epochs:           {self.n_epochs}")
-            print(f"  Learning rate:        {self.learning_rate}")
+            print(f"  Learning rate:        {self.learning_rate} -> {self.lr_min} (cosine)")
+            print(f"  Entropy coef:         {self.entropy_coef_start} -> {self.entropy_coef_end} (linear)")
+            print(f"  Est. updates:         {self.total_updates_estimate}")
             if domain_randomization:
                 presets = DOMAIN_RANDOM_PRESETS.get(domain_preset, [domain_preset])
                 print(f"  Domain Random:        {domain_preset} -> {presets}")
@@ -531,6 +558,8 @@ class DistributedPPOTrainer:
                     print(f"         Policy Loss: {update_stats['policy_loss']:.4f} | "
                           f"Value Loss: {update_stats['value_loss']:.4f} | "
                           f"Entropy: {update_stats['entropy']:.4f}")
+                    print(f"         LR: {update_stats.get('lr', self.learning_rate):.2e} | "
+                          f"Entropy Coef: {update_stats.get('entropy_coef', self.entropy_coef):.4f}")
                     if progress_pct > 0:
                         print(f"         Elapsed: {elapsed:.1f}s | "
                               f"ETA: {(elapsed / progress_pct * 100 - elapsed):.1f}s")

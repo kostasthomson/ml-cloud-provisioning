@@ -25,13 +25,13 @@ class RewardCalculator:
         self,
         energy_weight: float = 0.6,
         sla_weight: float = 0.2,
-        rejection_penalty: float = 0.8,
-        acceptance_bonus: float = 0.3,
+        rejection_penalty: float = 0.5,
+        acceptance_bonus: float = 0.35,
         normalize_energy: bool = True,
         energy_baseline: float = 0.05,
         energy_excellent_threshold: float = 0.03,
         energy_poor_threshold: float = 0.08,
-        scarcity_aware: bool = True,
+        scarcity_aware: bool = False,
         scarcity_rejection_scale: float = 1.5,
         scarcity_acceptance_scale: float = 2.0
     ):
@@ -49,6 +49,7 @@ class RewardCalculator:
         self._running_energy_sum = 0.0
         self._running_energy_count = 0
         self._running_energy_sq_sum = 0.0
+        self._energy_ema = energy_baseline
 
     def compute_reward(
         self,
@@ -138,6 +139,7 @@ class RewardCalculator:
         self._running_energy_count += 1
         self._running_energy_sum += energy_kwh
         self._running_energy_sq_sum += energy_kwh ** 2
+        self._energy_ema = 0.01 * energy_kwh + 0.99 * self._energy_ema
 
     def get_running_mean(self) -> float:
         """Get running mean of energy consumption."""
@@ -159,7 +161,8 @@ class RewardCalculator:
         Lower energy = higher reward, using exponential scaling.
         """
         if self.normalize_energy and self.energy_baseline > 0:
-            normalized = energy_kwh / self.energy_baseline
+            baseline = self._energy_ema if self._running_energy_count > 20 else self.energy_baseline
+            normalized = energy_kwh / baseline
             if normalized <= 0.5:
                 return 1.0
             elif normalized <= 1.0:

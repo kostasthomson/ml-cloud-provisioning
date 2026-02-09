@@ -169,7 +169,8 @@ class StateEncoder:
         avg_mem_util = np.mean(mem_utils)
         min_cpu_capacity = min(capacity_ratios)
         min_mem_capacity = min(mem_ratios)
-        scarcity_indicator = float(any(u > 0.8 for u in cpu_utils) or any(u > 0.8 for u in mem_utils))
+        max_util = max(max(cpu_utils), max(mem_utils))
+        scarcity_indicator = max(0.0, min(1.0, (max_util - 0.5) / 0.4))
 
         features = [
             avg_cpu_util,
@@ -206,16 +207,7 @@ class StateEncoder:
         mem_fit_ratio = available_memory / max(task_memory_needed, 1)
         task_fit_ratio = min(cpu_fit_ratio, mem_fit_ratio)
 
-        if total_cpus >= 2000:
-            scale_bucket = 1.0  # enterprise
-        elif total_cpus >= 1000:
-            scale_bucket = 0.75  # large
-        elif total_cpus >= 500:
-            scale_bucket = 0.5  # medium
-        elif total_cpus >= 200:
-            scale_bucket = 0.25  # small
-        else:
-            scale_bucket = 0.1  # stress_test/high_load
+        scale_bucket = min(total_cpus / 2000.0, 1.0)
 
         task_relative_size = task_cpus_needed / max(total_cpus, 1)
 

@@ -197,5 +197,5 @@ results/academic_v7/
 | V4 | Domain randomization | 37.42% | Baseline | ✓ Baseline |
 | V5 | Scarcity rewards (1.5/2.0) | 35.25% | -5.8% | ✗ Regression |
 | V6 | Gentler scaling (1.2/1.5) | 37.44% | +0.0% | ~ Recovery |
-| **V7** | **Capacity features (v3)** | **37.82%** | **+1.4%** | **✓ Improvement** |
-| V8 | Capacity only (no scarcity) | TBD | TBD | Pending |
+| **V7** | **Capacity features (v3)** | **37.82%** | **+1.4%** | **✓ Best** |
+| V8 | Lower LR (1e-4) + GPU fix | 36.76% | -1.8% | ✗ Regression |

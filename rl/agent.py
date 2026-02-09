@@ -28,8 +28,10 @@ class TaskEncoder(nn.Module):
         super().__init__()
         self.network = nn.Sequential(
             nn.Linear(input_dim, 64),
+            nn.LayerNorm(64),
             nn.ReLU(),
             nn.Linear(64, embed_dim),
+            nn.LayerNorm(embed_dim),
             nn.ReLU(),
         )
 
@@ -44,8 +46,10 @@ class HWEncoder(nn.Module):
         super().__init__()
         self.network = nn.Sequential(
             nn.Linear(input_dim, 64),
+            nn.LayerNorm(64),
             nn.ReLU(),
             nn.Linear(64, embed_dim),
+            nn.LayerNorm(embed_dim),
             nn.ReLU(),
         )
 
@@ -105,7 +109,7 @@ class PolicyNetwork(nn.Module):
         )
 
         self.value_head = nn.Sequential(
-            nn.Linear(embed_dim * 2, 64),
+            nn.Linear(embed_dim * 3, 64),
             nn.ReLU(),
             nn.Linear(64, 1),
         )
@@ -132,26 +136,20 @@ class PolicyNetwork(nn.Module):
         """
         task_emb = self.task_encoder(task_vec.unsqueeze(0)).squeeze(0)
 
-        hw_scores = []
-        hw_embs = []
-        for hw_vec in hw_vecs:
-            hw_emb = self.hw_encoder(hw_vec.unsqueeze(0)).squeeze(0)
-            hw_embs.append(hw_emb)
-            score = self.scorer(task_emb.unsqueeze(0), hw_emb.unsqueeze(0)).squeeze()
-            hw_scores.append(score)
-
-        if hw_embs:
-            hw_embs_stacked = torch.stack(hw_embs)
-            mean_hw_emb = hw_embs_stacked.mean(dim=0)
-        else:
-            mean_hw_emb = torch.zeros(self.embed_dim, device=task_vec.device)
-
-        reject_score = self.reject_head(task_emb.unsqueeze(0)).squeeze()
-
-        if hw_scores:
-            hw_scores_tensor = torch.stack(hw_scores)
+        if hw_vecs:
+            hw_stack = torch.stack(hw_vecs)
+            hw_embs = self.hw_encoder(hw_stack)
+            task_expanded = task_emb.unsqueeze(0).expand(len(hw_vecs), -1)
+            combined = torch.cat([task_expanded, hw_embs], dim=-1)
+            hw_scores_tensor = self.scorer.network(combined).squeeze(-1)
+            mean_hw_emb = hw_embs.mean(dim=0)
+            max_hw_emb = hw_embs.max(dim=0).values
         else:
             hw_scores_tensor = torch.tensor([], device=task_vec.device)
+            mean_hw_emb = torch.zeros(self.embed_dim, device=task_vec.device)
+            max_hw_emb = torch.zeros(self.embed_dim, device=task_vec.device)
+
+        reject_score = self.reject_head(task_emb.unsqueeze(0)).squeeze()
 
         all_scores = torch.cat([hw_scores_tensor, reject_score.unsqueeze(0)])
 
@@ -161,7 +159,7 @@ class PolicyNetwork(nn.Module):
 
         action_probs = torch.softmax(all_scores, dim=0)
 
-        value_input = torch.cat([task_emb, mean_hw_emb])
+        value_input = torch.cat([task_emb, mean_hw_emb, max_hw_emb])
         value = self.value_head(value_input.unsqueeze(0)).squeeze()
 
         return action_probs, value, all_scores

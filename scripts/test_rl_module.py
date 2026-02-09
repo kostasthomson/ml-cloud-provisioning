@@ -13,47 +13,31 @@ from rl import (
 )
 
 
-def test_state_encoder():
-    """Test state encoding."""
-    print("Testing StateEncoder...")
-
-    encoder = StateEncoder()
-    assert encoder.state_dim == 81, f"Expected 81, got {encoder.state_dim}"
-
+def _make_state(num_hw_types=2):
     task = TaskState(
         task_id="test_001",
         num_vms=4,
         vcpus_per_vm=8,
         memory_per_vm=32.0,
         instructions=1e10,
-        compatible_hw_types=[1, 2]
+        compatible_hw_types=list(range(1, num_hw_types + 1))
     )
 
-    hw_types = [
-        HWTypeState(
-            hw_type_id=1,
-            utilization_cpu=0.3,
-            utilization_memory=0.25,
-            available_cpus=1400,
-            available_memory=9600,
+    hw_types = []
+    for i in range(1, num_hw_types + 1):
+        hw_types.append(HWTypeState(
+            hw_type_id=i,
+            utilization_cpu=0.3 + 0.1 * i,
+            utilization_memory=0.25 + 0.05 * i,
+            available_cpus=1400 - 200 * i,
+            available_memory=9600 - 1000 * i,
             total_cpus=2000,
             total_memory=12800,
-            compute_capability=4400
-        ),
-        HWTypeState(
-            hw_type_id=2,
-            utilization_cpu=0.5,
-            utilization_memory=0.4,
-            available_cpus=1000,
-            available_memory=6000,
-            total_cpus=2000,
-            total_memory=10000,
-            compute_capability=8800,
-            available_accelerators=8,
-            total_accelerators=16,
-            accelerator_compute_capability=44000
-        )
-    ]
+            compute_capability=4400 * i,
+            available_accelerators=8 if i > 1 else 0,
+            total_accelerators=16 if i > 1 else 0,
+            accelerator_compute_capability=44000 if i > 1 else 0,
+        ))
 
     global_state = GlobalState(
         timestamp=100.0,
@@ -61,38 +45,61 @@ def test_state_encoder():
         queue_length=3
     )
 
-    state = RLState(task=task, hw_types=hw_types, global_state=global_state)
+    return RLState(task=task, hw_types=hw_types, global_state=global_state)
 
-    encoded = encoder.encode(state)
-    assert encoded.shape == (81,), f"Expected (81,), got {encoded.shape}"
-    assert encoded.min() >= 0.0, "Values should be >= 0"
-    assert encoded.max() <= 1.0, "Values should be <= 1"
 
-    mask = encoder.get_valid_actions_mask(state)
-    assert mask.shape == (5,), f"Expected (5,), got {mask.shape}"
-    assert mask[4] == True, "Reject should always be valid"
+def test_state_encoder():
+    print("Testing StateEncoder...")
 
-    print(f"  Encoded state shape: {encoded.shape}")
-    print(f"  Valid actions mask: {mask}")
+    encoder = StateEncoder(use_scarcity_features=True, use_capacity_features=True)
+    assert encoder.task_dim == 28, f"Expected 28, got {encoder.task_dim}"
+    assert encoder.hw_dim == 16, f"Expected 16, got {encoder.hw_dim}"
+
+    state = _make_state(num_hw_types=3)
+    task_vec, hw_list = encoder.encode(state)
+
+    assert task_vec.shape == (28,), f"Expected (28,), got {task_vec.shape}"
+    assert len(hw_list) == 3, f"Expected 3 HW types, got {len(hw_list)}"
+    for hw_id, hw_vec in hw_list:
+        assert hw_vec.shape == (16,), f"Expected (16,), got {hw_vec.shape}"
+
+    assert task_vec.min() >= 0.0, "Values should be >= 0"
+    assert task_vec.max() <= 1.0, "Values should be <= 1"
+
+    valid = encoder.get_valid_hw_types(state)
+    assert isinstance(valid, list), "Should return list"
+    print(f"  Task vec shape: {task_vec.shape}")
+    print(f"  HW types encoded: {len(hw_list)}")
+    print(f"  Valid HW types: {valid}")
+
+    encoder_v2 = StateEncoder(use_scarcity_features=True, use_capacity_features=False)
+    assert encoder_v2.task_dim == 22, f"Expected 22, got {encoder_v2.task_dim}"
+
+    encoder_v1 = StateEncoder(use_scarcity_features=False)
+    assert encoder_v1.task_dim == 17, f"Expected 17, got {encoder_v1.task_dim}"
+
     print("  StateEncoder: PASSED")
 
 
 def test_reward_calculator():
-    """Test reward computation."""
     print("\nTesting RewardCalculator...")
 
     calc = RewardCalculator()
+
+    assert calc.rejection_penalty == 0.5, f"Expected 0.5, got {calc.rejection_penalty}"
+    assert calc.acceptance_bonus == 0.35, f"Expected 0.35, got {calc.acceptance_bonus}"
+    assert calc.scarcity_aware == False, f"Expected False, got {calc.scarcity_aware}"
 
     outcome_accept = TaskOutcome(
         task_id="test",
         action_taken=0,
         accepted=True,
-        energy_consumed_kwh=0.5,
+        energy_consumed_kwh=0.02,
         deadline_met=True
     )
     reward_accept = calc.compute_reward(outcome_accept)
-    print(f"  Accepted task (deadline met): reward = {reward_accept:.3f}")
-    assert reward_accept > 0, "Accepted task with met deadline should have positive reward"
+    print(f"  Accepted task (deadline met, low energy): reward = {reward_accept:.3f}")
+    assert reward_accept > 0, "Accepted task with met deadline and low energy should have positive reward"
 
     outcome_reject = TaskOutcome(
         task_id="test",
@@ -103,6 +110,7 @@ def test_reward_calculator():
     reward_reject = calc.compute_reward(outcome_reject)
     print(f"  Rejected task: reward = {reward_reject:.3f}")
     assert reward_reject < 0, "Rejected task should have negative reward"
+    assert reward_reject == -0.5, f"Expected -0.5, got {reward_reject}"
 
     outcome_sla_violation = TaskOutcome(
         task_id="test",
@@ -115,43 +123,23 @@ def test_reward_calculator():
     reward_sla = calc.compute_reward(outcome_sla_violation)
     print(f"  SLA violation: reward = {reward_sla:.3f}")
 
+    calc2 = RewardCalculator()
+    for i in range(25):
+        calc2._update_running_stats(0.04 + i * 0.001)
+    assert calc2._running_energy_count == 25
+    assert calc2._energy_ema != calc2.energy_baseline, "EMA should have updated"
+    print(f"  EMA after 25 samples: {calc2._energy_ema:.6f}")
+
     print("  RewardCalculator: PASSED")
 
 
 def test_agent():
-    """Test RL agent."""
     print("\nTesting RLAgent...")
 
-    agent = RLAgent()
+    agent = RLAgent(use_capacity_features=True)
+    assert agent.task_dim == 28, f"Expected 28, got {agent.task_dim}"
 
-    task = TaskState(
-        task_id="test_001",
-        num_vms=2,
-        vcpus_per_vm=4,
-        memory_per_vm=16.0,
-        instructions=1e9,
-        compatible_hw_types=[1, 2, 3]
-    )
-
-    hw_types = [
-        HWTypeState(
-            hw_type_id=i,
-            utilization_cpu=0.3,
-            utilization_memory=0.25,
-            available_cpus=1000,
-            available_memory=5000,
-            total_cpus=1500,
-            total_memory=8000,
-            compute_capability=4400 * i,
-            available_accelerators=5 if i > 1 else 0,
-            total_accelerators=10 if i > 1 else 0
-        )
-        for i in [1, 2, 3, 4]
-    ]
-
-    global_state = GlobalState(timestamp=0.0)
-    state = RLState(task=task, hw_types=hw_types, global_state=global_state)
-
+    state = _make_state(num_hw_types=3)
     action, value, time_ms = agent.predict(state, deterministic=True)
     print(f"  Predicted action: {action.action} ({action.action_name})")
     print(f"  Confidence: {action.confidence:.3f}")
@@ -160,11 +148,44 @@ def test_agent():
 
     probs = agent.get_action_probs(state)
     print(f"  Action probabilities: {probs}")
+    assert len(probs) == 4, f"Expected 4 entries (3 HW + reject), got {len(probs)}"
+    assert -1 in probs, "Should have reject action (-1)"
 
     info = agent.get_model_info()
-    print(f"  Model info: trained={info.is_trained}, state_dim={info.state_dim}")
+    print(f"  Model info: trained={info.is_trained}, task_dim={info.task_dim}")
 
     print("  RLAgent: PASSED")
+
+
+def test_policy_network():
+    print("\nTesting PolicyNetwork architecture...")
+
+    from rl.agent import PolicyNetwork
+    import torch
+
+    policy = PolicyNetwork(task_dim=28, hw_dim=16, embed_dim=64)
+
+    assert policy.value_head[0].in_features == 192, \
+        f"Value head input should be 192 (64*3), got {policy.value_head[0].in_features}"
+
+    has_layernorm = any(isinstance(m, torch.nn.LayerNorm) for m in policy.task_encoder.network)
+    assert has_layernorm, "TaskEncoder should have LayerNorm"
+
+    has_layernorm = any(isinstance(m, torch.nn.LayerNorm) for m in policy.hw_encoder.network)
+    assert has_layernorm, "HWEncoder should have LayerNorm"
+
+    task_vec = torch.randn(28)
+    hw_vecs = [torch.randn(16) for _ in range(3)]
+    valid_mask = torch.tensor([True, True, False])
+
+    probs, value, scores = policy.forward(task_vec, hw_vecs, valid_mask)
+    assert probs.shape == (4,), f"Expected (4,) probs, got {probs.shape}"
+    assert scores.shape == (4,), f"Expected (4,) scores, got {scores.shape}"
+    assert probs[2].item() == 0.0, "Masked HW should have 0 probability"
+
+    print(f"  Probs shape: {probs.shape}")
+    print(f"  Value: {value.item():.4f}")
+    print("  PolicyNetwork: PASSED")
 
 
 def main():
@@ -174,6 +195,7 @@ def main():
 
     test_state_encoder()
     test_reward_calculator()
+    test_policy_network()
     test_agent()
 
     print("\n" + "=" * 50)

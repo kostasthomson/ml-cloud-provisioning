@@ -156,6 +156,11 @@ def train_distributed(
     gae_lambda: float,
     clip_range: float,
     use_capacity_features: bool = False,
+    rejection_penalty: float = 0.5,
+    acceptance_bonus: float = 0.35,
+    entropy_coef_start: float = 0.05,
+    entropy_coef_end: float = 0.001,
+    lr_min: float = 1e-5,
 ) -> Dict[str, Any]:
     if is_main_process():
         logger.info("=" * 70)
@@ -169,7 +174,8 @@ def train_distributed(
 
     reward_config = {
         'scarcity_aware': scarcity_aware,
-        'rejection_penalty': 0.8,
+        'rejection_penalty': rejection_penalty,
+        'acceptance_bonus': acceptance_bonus,
         'scarcity_rejection_scale': scarcity_rejection_scale,
         'scarcity_acceptance_scale': scarcity_acceptance_scale,
     }
@@ -182,6 +188,9 @@ def train_distributed(
         n_epochs=epochs,
         batch_size=batch_size,
         use_capacity_features=use_capacity_features,
+        entropy_coef_start=entropy_coef_start,
+        entropy_coef_end=entropy_coef_end,
+        lr_min=lr_min,
     )
 
     model_path = str(output.models_dir / 'model_v5.pth')
@@ -215,10 +224,15 @@ def train_distributed(
             'domain_preset': domain_preset,
             'curriculum': curriculum,
             'scarcity_aware': scarcity_aware,
+            'rejection_penalty': rejection_penalty,
+            'acceptance_bonus': acceptance_bonus,
             'scarcity_rejection_scale': scarcity_rejection_scale,
             'scarcity_acceptance_scale': scarcity_acceptance_scale,
             'use_capacity_features': use_capacity_features,
             'lr': lr,
+            'lr_min': lr_min,
+            'entropy_coef_start': entropy_coef_start,
+            'entropy_coef_end': entropy_coef_end,
             'batch_size': batch_size,
             'epochs': epochs,
             'gamma': gamma,
@@ -585,8 +599,8 @@ def main():
         epilog=__doc__
     )
 
-    parser.add_argument('--timesteps', type=int, default=100000,
-                        help='Training timesteps (default: 100000)')
+    parser.add_argument('--timesteps', type=int, default=2000000,
+                        help='Training timesteps (default: 2000000)')
     parser.add_argument('--output-dir', type=str, default='results/academic_v5',
                         help='Output directory')
     parser.add_argument('--domain-preset', type=str, default='constrained_first',
@@ -628,6 +642,16 @@ def main():
                         help='Path to v4 baseline JSON for comparison')
     parser.add_argument('--use-capacity-features', action='store_true',
                         help='Enable v3 capacity scale features (addresses scale blindness)')
+    parser.add_argument('--rejection-penalty', type=float, default=0.5,
+                        help='Base rejection penalty (default: 0.5)')
+    parser.add_argument('--acceptance-bonus', type=float, default=0.35,
+                        help='Base acceptance bonus (default: 0.35)')
+    parser.add_argument('--entropy-start', type=float, default=0.05,
+                        help='Initial entropy coefficient (default: 0.05)')
+    parser.add_argument('--entropy-end', type=float, default=0.001,
+                        help='Final entropy coefficient (default: 0.001)')
+    parser.add_argument('--lr-min', type=float, default=1e-5,
+                        help='Minimum learning rate for cosine schedule (default: 1e-5)')
 
     args = parser.parse_args()
 
@@ -670,6 +694,11 @@ def main():
             gae_lambda=args.gae_lambda,
             clip_range=args.clip_range,
             use_capacity_features=args.use_capacity_features,
+            rejection_penalty=args.rejection_penalty,
+            acceptance_bonus=args.acceptance_bonus,
+            entropy_coef_start=args.entropy_start,
+            entropy_coef_end=args.entropy_end,
+            lr_min=args.lr_min,
         )
         model_path = training_results['model_path']
 

@@ -94,6 +94,15 @@ DOMAIN_RANDOM_PRESETS = {
     'production': ['high_load', 'medium', 'large', 'enterprise'],
 }
 
+CURRICULUM_THRESHOLDS = {
+    'stress_test': 0.15,
+    'high_load': 0.30,
+    'small': 0.35,
+    'medium': 0.50,
+    'large': 0.60,
+    'enterprise': 0.65,
+}
+
 
 class CloudProvisioningEnv:
     """
@@ -457,7 +466,7 @@ class CloudProvisioningEnv:
 
         base_time = task.instructions / max(compute * 1e6, 1)
 
-        min_exec_time = 5.0 + np.random.uniform(0, 10.0)
+        min_exec_time = 1.0
         base_time = max(base_time, min_exec_time)
 
         if self.exec_time_noise > 0:
@@ -533,7 +542,7 @@ class DomainRandomizedEnv(CloudProvisioningEnv):
         domain_preset: str = 'mixed_capacity',
         preset_weights: Optional[List[float]] = None,
         curriculum: bool = False,
-        curriculum_threshold: float = 0.6,
+        curriculum_threshold: Optional[float] = None,
         **kwargs
     ):
         """
@@ -544,7 +553,7 @@ class DomainRandomizedEnv(CloudProvisioningEnv):
             domain_preset: Named preset group from DOMAIN_RANDOM_PRESETS
             preset_weights: Sampling weights for each preset (uniform if None)
             curriculum: If True, start with harder presets and progress to easier
-            curriculum_threshold: Acceptance rate threshold to advance curriculum
+            curriculum_threshold: Legacy fixed threshold (None = use per-preset thresholds)
             **kwargs: Additional arguments for CloudProvisioningEnv
         """
         if presets is None:
@@ -590,11 +599,18 @@ class DomainRandomizedEnv(CloudProvisioningEnv):
         if len(self.recent_acceptance_rates) >= 10:
             avg_rate = np.mean(self.recent_acceptance_rates[-10:])
 
-            if avg_rate >= self.curriculum_threshold:
+            current_preset = self.available_presets[min(self.curriculum_stage, len(self.available_presets) - 1)]
+            if self.curriculum_threshold is not None:
+                threshold = self.curriculum_threshold
+            else:
+                threshold = CURRICULUM_THRESHOLDS.get(current_preset, 0.50)
+
+            if avg_rate >= threshold:
                 if self.curriculum_stage < len(self.available_presets) - 1:
                     self.curriculum_stage += 1
                     logger.info(f"Curriculum advanced to stage {self.curriculum_stage}: "
-                               f"{self.available_presets[self.curriculum_stage]}")
+                               f"{self.available_presets[self.curriculum_stage]} "
+                               f"(threshold was {threshold:.2f})")
                     self.recent_acceptance_rates = []
 
     def reset(self, seed: Optional[int] = None) -> Tuple[RLState, Dict]:

@@ -51,8 +51,8 @@ Examples:
         """
     )
 
-    parser.add_argument('--timesteps', type=int, default=100000,
-                        help='Total training timesteps across all GPUs (default: 100000)')
+    parser.add_argument('--timesteps', type=int, default=2000000,
+                        help='Total training timesteps across all GPUs (default: 2000000)')
     parser.add_argument('--save-path', type=str, default='models/rl/ppo/model_distributed.pth',
                         help='Model save path (default: models/rl/ppo/model_distributed.pth)')
     parser.add_argument('--lr', type=float, default=3e-4,
@@ -85,8 +85,8 @@ Examples:
                         help='Enable curriculum learning (start with harder presets)')
     parser.add_argument('--scarcity-aware', action='store_true',
                         help='Enable scarcity-aware rewards (default: disabled, proven harmful in V5/V6)')
-    parser.add_argument('--rejection-penalty', type=float, default=0.8,
-                        help='Base rejection penalty (default: 0.8)')
+    parser.add_argument('--rejection-penalty', type=float, default=0.5,
+                        help='Base rejection penalty (default: 0.5)')
     parser.add_argument('--scarcity-rejection-scale', type=float, default=1.5,
                         help='Rejection penalty scale when resources available (default: 1.5)')
     parser.add_argument('--scarcity-acceptance-scale', type=float, default=2.0,
@@ -95,6 +95,14 @@ Examples:
                         help='Enable v3 capacity scale features (addresses scale blindness)')
     parser.add_argument('--checkpoint-interval', type=int, default=50000,
                         help='Save checkpoint every N global timesteps (default: 50000)')
+    parser.add_argument('--acceptance-bonus', type=float, default=0.35,
+                        help='Base acceptance bonus (default: 0.35)')
+    parser.add_argument('--entropy-start', type=float, default=0.05,
+                        help='Initial entropy coefficient (default: 0.05)')
+    parser.add_argument('--entropy-end', type=float, default=0.001,
+                        help='Final entropy coefficient (default: 0.001)')
+    parser.add_argument('--lr-min', type=float, default=1e-5,
+                        help='Minimum learning rate for cosine schedule (default: 1e-5)')
 
     args = parser.parse_args()
 
@@ -119,11 +127,16 @@ Examples:
             logger.info(f"Environment preset: {args.env_preset}")
         logger.info(f"Scarcity-aware rewards: {args.scarcity_aware}")
         logger.info(f"Capacity features (v3): {args.use_capacity_features}")
+        logger.info(f"Rejection penalty: {args.rejection_penalty}")
+        logger.info(f"Acceptance bonus: {args.acceptance_bonus}")
+        logger.info(f"Entropy: {args.entropy_start} -> {args.entropy_end}")
+        logger.info(f"LR schedule: {args.lr} -> {args.lr_min} (cosine)")
         logger.info("=" * 60)
 
     reward_config = {
         'scarcity_aware': args.scarcity_aware,
         'rejection_penalty': args.rejection_penalty,
+        'acceptance_bonus': args.acceptance_bonus,
         'scarcity_rejection_scale': args.scarcity_rejection_scale,
         'scarcity_acceptance_scale': args.scarcity_acceptance_scale,
     }
@@ -137,6 +150,9 @@ Examples:
             n_epochs=args.epochs,
             batch_size=args.batch_size,
             use_capacity_features=args.use_capacity_features,
+            entropy_coef_start=args.entropy_start,
+            entropy_coef_end=args.entropy_end,
+            lr_min=args.lr_min,
         )
 
         results = trainer.train(
