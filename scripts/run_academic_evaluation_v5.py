@@ -119,9 +119,9 @@ class OutputManager:
         if not rows:
             logger.warning(f"No data to save: {filename}")
             return None
-        fieldnames = list(rows[0].keys())
+        fieldnames = list(dict.fromkeys(k for row in rows for k in row))
         with open(path, 'w', newline='', encoding='utf-8') as f:
-            writer = csv.DictWriter(f, fieldnames=fieldnames)
+            writer = csv.DictWriter(f, fieldnames=fieldnames, restval='')
             writer.writeheader()
             writer.writerows(rows)
         logger.info(f"Saved CSV: {path} ({len(rows)} rows)")
