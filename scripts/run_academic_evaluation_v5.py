@@ -161,6 +161,7 @@ def train_distributed(
     entropy_coef_start: float = 0.05,
     entropy_coef_end: float = 0.001,
     lr_min: float = 1e-5,
+    version_tag: str = 'v10',
 ) -> Dict[str, Any]:
     if is_main_process():
         logger.info("=" * 70)
@@ -193,7 +194,7 @@ def train_distributed(
         lr_min=lr_min,
     )
 
-    model_path = str(output.models_dir / 'model_v5.pth')
+    model_path = str(output.models_dir / f'model_{version_tag}.pth')
 
     start_time = time.time()
     results = trainer.train(
@@ -352,6 +353,9 @@ def evaluate_generalization(
         capacity_rej = sum(m.capacity_rejections for m in metrics_list)
         policy_rej = sum(m.policy_rejections for m in metrics_list)
 
+        all_reject_probs = [p for m in metrics_list for p in m.reject_probs_with_capacity]
+        avg_reject_prob = float(np.mean(all_reject_probs)) if all_reject_probs else 0.0
+
         results[preset] = {
             'acceptance_rate': total_accepted / max(total_tasks, 1),
             'avg_energy_kwh': float(np.mean([m.total_energy_kwh for m in metrics_list])),
@@ -366,6 +370,7 @@ def evaluate_generalization(
             'policy_rejections': policy_rej,
             'capacity_rejection_ratio': capacity_rej / max(total_rejected, 1),
             'policy_rejection_pct': policy_rej / max(total_rejected, 1) * 100,
+            'avg_reject_prob_with_capacity': avg_reject_prob,
         }
 
         logger.info(f"    Acceptance: {results[preset]['acceptance_rate']:.3f}, "
@@ -505,13 +510,14 @@ def generate_final_report(
     generalization_results: Dict[str, Any],
     utilization_summary: Dict[str, Any],
     v4_baseline: Optional[Dict[str, Any]] = None,
+    version_tag: str = 'v10',
 ):
     logger.info("=" * 70)
     logger.info("PHASE 5: Final Report Generation")
     logger.info("=" * 70)
 
     report = {
-        'version': 'v5',
+        'version': version_tag,
         'timestamp': datetime.now().isoformat(),
         'training': training_results,
         'generalization': generalization_results,
@@ -652,6 +658,8 @@ def main():
                         help='Final entropy coefficient (default: 0.001)')
     parser.add_argument('--lr-min', type=float, default=1e-5,
                         help='Minimum learning rate for cosine schedule (default: 1e-5)')
+    parser.add_argument('--version-tag', type=str, default='v10',
+                        help='Version tag for model filename and report (default: v10)')
 
     args = parser.parse_args()
 
@@ -659,7 +667,7 @@ def main():
 
     if is_main_process():
         logger.info("=" * 70)
-        logger.info("Academic Evaluation Suite v5")
+        logger.info(f"Academic Evaluation Suite ({args.version_tag})")
         logger.info("=" * 70)
         logger.info(f"Output directory: {args.output_dir}")
         logger.info(f"Timesteps: {args.timesteps}")
@@ -699,6 +707,7 @@ def main():
             entropy_coef_start=args.entropy_start,
             entropy_coef_end=args.entropy_end,
             lr_min=args.lr_min,
+            version_tag=args.version_tag,
         )
         model_path = training_results['model_path']
 
@@ -734,6 +743,7 @@ def main():
         generalization_results=generalization_results,
         utilization_summary=utilization_summary,
         v4_baseline=v4_baseline,
+        version_tag=args.version_tag,
     )
 
 

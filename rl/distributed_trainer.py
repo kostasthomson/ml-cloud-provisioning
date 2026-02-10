@@ -56,6 +56,7 @@ class TrainingMetrics:
     policy_losses: List[float] = field(default_factory=list)
     value_losses: List[float] = field(default_factory=list)
     entropy_losses: List[float] = field(default_factory=list)
+    avg_reject_probs: List[float] = field(default_factory=list)
 
     def to_dict(self) -> Dict:
         return {
@@ -64,6 +65,7 @@ class TrainingMetrics:
             'policy_losses': self.policy_losses,
             'value_losses': self.value_losses,
             'entropy_losses': self.entropy_losses,
+            'avg_reject_probs': self.avg_reject_probs,
         }
 
 
@@ -279,8 +281,8 @@ class DistributedPPOTrainer:
             return self.policy.module
         return self.policy
 
-    def _select_action(self, state: RLState) -> Tuple[int, int, float, float, List[int], List[np.ndarray], np.ndarray]:
-        """Select action for a single state."""
+    def _select_action(self, state: RLState) -> Tuple[int, int, float, float, List[int], List[np.ndarray], np.ndarray, np.ndarray, float]:
+        """Select action for a single state. Returns 9 values including reject_prob."""
         task_vec, hw_list = self.encoder.encode(state)
         valid_hw_types = self.encoder.get_valid_hw_types(state)
 
@@ -297,6 +299,7 @@ class DistributedPPOTrainer:
             action_probs, value, _ = policy_module.forward(task_tensor, hw_tensors, mask_tensor)
 
         probs = action_probs.cpu().numpy()
+        reject_prob = float(probs[-1])
         action_idx = np.random.choice(len(probs), p=probs)
         log_prob = np.log(probs[action_idx] + 1e-8)
 
@@ -305,20 +308,22 @@ class DistributedPPOTrainer:
         else:
             action = -1
 
-        return action, action_idx, log_prob, value.item(), hw_type_ids, hw_vecs, valid_mask, task_vec
+        return action, action_idx, log_prob, value.item(), hw_type_ids, hw_vecs, valid_mask, task_vec, reject_prob
 
     def collect_rollouts(self, vec_env: VectorizedEnv, n_steps: int) -> Tuple[int, List[float]]:
         """Collect rollouts from vectorized environment."""
         states = vec_env.states
         episode_rewards = []
         current_rewards = [0.0] * vec_env.num_envs
+        rollout_reject_probs = []
         steps = 0
 
         for _ in range(n_steps):
             actions = []
             for i, state in enumerate(states):
-                action, action_idx, log_prob, value, hw_ids, hw_vecs, valid_mask, task_vec = self._select_action(state)
+                action, action_idx, log_prob, value, hw_ids, hw_vecs, valid_mask, task_vec, reject_prob = self._select_action(state)
                 actions.append(action)
+                rollout_reject_probs.append(reject_prob)
 
                 exp = Experience(
                     task_vec=task_vec,
@@ -351,12 +356,15 @@ class DistributedPPOTrainer:
             steps += vec_env.num_envs
 
         if states:
-            _, _, _, last_value, _, _, _, _ = self._select_action(states[0])
+            _, _, _, last_value, _, _, _, _, _ = self._select_action(states[0])
         else:
             last_value = 0.0
 
         self.buffer.compute_returns_and_advantages(last_value)
         self.current_timestep += steps
+
+        if rollout_reject_probs:
+            self.metrics.avg_reject_probs.append(float(np.mean(rollout_reject_probs)))
 
         return steps, episode_rewards
 
@@ -558,8 +566,10 @@ class DistributedPPOTrainer:
                     print(f"         Policy Loss: {update_stats['policy_loss']:.4f} | "
                           f"Value Loss: {update_stats['value_loss']:.4f} | "
                           f"Entropy: {update_stats['entropy']:.4f}")
+                    avg_rej_prob = self.metrics.avg_reject_probs[-1] if self.metrics.avg_reject_probs else 0.0
                     print(f"         LR: {update_stats.get('lr', self.learning_rate):.2e} | "
-                          f"Entropy Coef: {update_stats.get('entropy_coef', self.entropy_coef):.4f}")
+                          f"Entropy Coef: {update_stats.get('entropy_coef', self.entropy_coef):.4f} | "
+                          f"Avg Reject Prob: {avg_rej_prob:.3f}")
                     if progress_pct > 0:
                         print(f"         Elapsed: {elapsed:.1f}s | "
                               f"ETA: {(elapsed / progress_pct * 100 - elapsed):.1f}s")
@@ -644,6 +654,7 @@ class DistributedPPOTrainer:
             'distributed_training': self.is_distributed,
             'world_size': self.world_size,
             'use_capacity_features': self.use_capacity_features,
+            'reject_head_version': 'v2',
         }
 
         Path(path).parent.mkdir(parents=True, exist_ok=True)
@@ -688,10 +699,20 @@ class DistributedPPOTrainer:
         """Load model checkpoint."""
         checkpoint = torch.load(path, map_location=self.device, weights_only=False)
         policy_module = self._get_policy_module()
-        policy_module.load_state_dict(checkpoint['policy_state_dict'])
+
+        if checkpoint.get('reject_head_version') != 'v2':
+            logger.warning("Loading pre-V10 model - reject head will be reinitialized")
+            state_dict = {k: v for k, v in checkpoint['policy_state_dict'].items()
+                         if not k.startswith('reject_head.')}
+            policy_module.load_state_dict(state_dict, strict=False)
+        else:
+            policy_module.load_state_dict(checkpoint['policy_state_dict'])
 
         if 'optimizer_state_dict' in checkpoint:
-            self.optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+            try:
+                self.optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+            except (ValueError, KeyError):
+                logger.warning("Optimizer state incompatible with V10 architecture, reinitializing")
 
         logger.info(f"Model loaded from {path}")
 

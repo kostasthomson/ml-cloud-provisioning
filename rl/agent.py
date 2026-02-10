@@ -102,10 +102,11 @@ class PolicyNetwork(nn.Module):
         self.hw_encoder = HWEncoder(hw_dim, embed_dim)
         self.scorer = Scorer(embed_dim, embed_dim)
 
+        self.reject_input_dim = embed_dim * 3 + 3
         self.reject_head = nn.Sequential(
-            nn.Linear(embed_dim, 32),
+            nn.Linear(self.reject_input_dim, 64),
             nn.ReLU(),
-            nn.Linear(32, 1),
+            nn.Linear(64, 1),
         )
 
         self.value_head = nn.Sequential(
@@ -149,7 +150,27 @@ class PolicyNetwork(nn.Module):
             mean_hw_emb = torch.zeros(self.embed_dim, device=task_vec.device)
             max_hw_emb = torch.zeros(self.embed_dim, device=task_vec.device)
 
-        reject_score = self.reject_head(task_emb.unsqueeze(0)).squeeze()
+        if hw_scores_tensor.numel() > 0:
+            if valid_mask is not None and valid_mask.any():
+                valid_scores = hw_scores_tensor[valid_mask]
+                max_hw_score = valid_scores.max()
+                mean_hw_score = valid_scores.mean()
+            else:
+                max_hw_score = hw_scores_tensor.max()
+                mean_hw_score = hw_scores_tensor.mean()
+            num_valid = float(valid_mask.sum()) / len(hw_scores_tensor) if valid_mask is not None else 1.0
+        else:
+            max_hw_score = torch.tensor(0.0, device=task_vec.device)
+            mean_hw_score = torch.tensor(0.0, device=task_vec.device)
+            num_valid = 0.0
+
+        capacity_summary = torch.stack([
+            max_hw_score.detach(),
+            mean_hw_score.detach(),
+            torch.tensor(num_valid, device=task_vec.device),
+        ])
+        reject_input = torch.cat([task_emb, mean_hw_emb, max_hw_emb, capacity_summary])
+        reject_score = self.reject_head(reject_input.unsqueeze(0)).squeeze()
 
         all_scores = torch.cat([hw_scores_tensor, reject_score.unsqueeze(0)])
 
@@ -335,6 +356,7 @@ class RLAgent:
             'embed_dim': self.embed_dim,
             'last_training_reward': self.last_training_reward,
             'infrastructure_agnostic': True,
+            'reject_head_version': 'v2',
         }
         if self.training_config:
             save_dict['training_config'] = self.training_config.model_dump()
@@ -370,7 +392,15 @@ class RLAgent:
                 embed_dim=self.embed_dim
             ).to(self.device)
 
-        self.policy.load_state_dict(checkpoint['policy_state_dict'])
+        if checkpoint.get('reject_head_version') != 'v2':
+            logger.warning("Loading pre-V10 model - reject head will be reinitialized "
+                          "(old reject head had no capacity awareness)")
+            state_dict = checkpoint['policy_state_dict']
+            state_dict = {k: v for k, v in state_dict.items()
+                         if not k.startswith('reject_head.')}
+            self.policy.load_state_dict(state_dict, strict=False)
+        else:
+            self.policy.load_state_dict(checkpoint['policy_state_dict'])
         self.is_trained = checkpoint.get('is_trained', True)
         self.training_timesteps = checkpoint.get('training_timesteps', 0)
         self.last_training_reward = checkpoint.get('last_training_reward')

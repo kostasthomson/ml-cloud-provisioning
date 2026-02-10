@@ -67,6 +67,7 @@ class EpisodeMetrics:
     sla_violations: int = 0
     capacity_rejections: int = 0
     policy_rejections: int = 0
+    reject_probs_with_capacity: List[float] = field(default_factory=list)
 
 
 class UtilizationTracker:
@@ -102,6 +103,8 @@ class UtilizationTracker:
                 action_probs, _, _ = self.agent.policy.forward(task_tensor, hw_tensors, mask_tensor)
 
             probs = action_probs.cpu().numpy()
+            if valid_mask.any():
+                metrics.reject_probs_with_capacity.append(float(probs[-1]))
             action_idx = np.argmax(probs)
 
             if action_idx < len(hw_type_ids):

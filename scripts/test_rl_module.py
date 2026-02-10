@@ -168,6 +168,9 @@ def test_policy_network():
     assert policy.value_head[0].in_features == 192, \
         f"Value head input should be 192 (64*3), got {policy.value_head[0].in_features}"
 
+    assert policy.reject_head[0].in_features == 195, \
+        f"Reject head input should be 195 (64*3+3), got {policy.reject_head[0].in_features}"
+
     has_layernorm = any(isinstance(m, torch.nn.LayerNorm) for m in policy.task_encoder.network)
     assert has_layernorm, "TaskEncoder should have LayerNorm"
 
@@ -188,6 +191,44 @@ def test_policy_network():
     print("  PolicyNetwork: PASSED")
 
 
+def test_reject_head_capacity_awareness():
+    print("\nTesting reject head capacity awareness...")
+
+    from rl.agent import PolicyNetwork
+    import torch
+
+    policy = PolicyNetwork(task_dim=28, hw_dim=16, embed_dim=64)
+
+    task_vec = torch.randn(28)
+    hw_vecs = [torch.randn(16) for _ in range(3)]
+    valid_mask = torch.tensor([True, True, True])
+    probs, value, scores = policy.forward(task_vec, hw_vecs, valid_mask)
+    assert probs.shape == (4,), f"Expected (4,) probs, got {probs.shape}"
+    assert probs[-1].item() >= 0, "Reject prob should be non-negative"
+    print(f"  All-valid: reject_prob={probs[-1].item():.4f}")
+
+    valid_mask_none = torch.tensor([False, False, False])
+    probs2, _, _ = policy.forward(task_vec, hw_vecs, valid_mask_none)
+    assert probs2.shape == (4,), f"Expected (4,), got {probs2.shape}"
+    for i in range(3):
+        assert probs2[i].item() == 0.0, f"Masked HW {i} should have 0 prob"
+    assert probs2[-1].item() > 0, "Reject should be only valid action"
+    print(f"  None-valid: reject_prob={probs2[-1].item():.4f}")
+
+    hw_vecs_single = [torch.randn(16)]
+    valid_mask_single = torch.tensor([True])
+    probs3, _, _ = policy.forward(task_vec, hw_vecs_single, valid_mask_single)
+    assert probs3.shape == (2,), f"Expected (2,), got {probs3.shape}"
+    print(f"  Single HW: reject_prob={probs3[-1].item():.4f}")
+
+    probs4, _, _ = policy.forward(task_vec, [], None)
+    assert probs4.shape == (1,), f"Expected (1,), got {probs4.shape}"
+    assert abs(probs4[0].item() - 1.0) < 1e-5, "Empty HW: reject should be 1.0"
+    print(f"  Empty HW: reject_prob={probs4[0].item():.4f}")
+
+    print("  Reject head capacity awareness: PASSED")
+
+
 def main():
     print("=" * 50)
     print("RL Module Tests")
@@ -196,6 +237,7 @@ def main():
     test_state_encoder()
     test_reward_calculator()
     test_policy_network()
+    test_reject_head_capacity_awareness()
     test_agent()
 
     print("\n" + "=" * 50)
