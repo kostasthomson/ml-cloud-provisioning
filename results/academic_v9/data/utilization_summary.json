@@ -1,0 +1,47 @@
+{
+  "small": {
+    "avg_acceptance_rate": 0.2912,
+    "std_acceptance_rate": 0.016424372134118237,
+    "avg_energy_kwh": 0.10772461149432525,
+    "std_energy_kwh": 0.018335419056131966,
+    "avg_capacity_rejections": 131.8,
+    "avg_policy_rejections": 222.6,
+    "capacity_rejection_ratio": 0.3724041349423481
+  },
+  "medium": {
+    "avg_acceptance_rate": 0.5152,
+    "std_acceptance_rate": 0.03437673631978467,
+    "avg_energy_kwh": 0.2769352414358713,
+    "std_energy_kwh": 0.04590808335882278,
+    "avg_capacity_rejections": 134.8,
+    "avg_policy_rejections": 107.6,
+    "capacity_rejection_ratio": 0.5565303296081995
+  },
+  "large": {
+    "avg_acceptance_rate": 0.6968,
+    "std_acceptance_rate": 0.025317187837514635,
+    "avg_energy_kwh": 0.40024559757441613,
+    "std_energy_kwh": 0.0389570467094992,
+    "avg_capacity_rejections": 112.0,
+    "avg_policy_rejections": 39.6,
+    "capacity_rejection_ratio": 0.7415511082327876
+  },
+  "high_load": {
+    "avg_acceptance_rate": 0.27959999999999996,
+    "std_acceptance_rate": 0.036734724716540344,
+    "avg_energy_kwh": 0.1077648884706669,
+    "std_energy_kwh": 0.019260387720941533,
+    "avg_capacity_rejections": 152.8,
+    "avg_policy_rejections": 207.4,
+    "capacity_rejection_ratio": 0.424107498292122
+  },
+  "stress_test": {
+    "avg_acceptance_rate": 0.16040000000000001,
+    "std_acceptance_rate": 0.01248358922746179,
+    "avg_energy_kwh": 0.021208204821125478,
+    "std_energy_kwh": 0.006604737166284109,
+    "avg_capacity_rejections": 139.2,
+    "avg_policy_rejections": 280.6,
+    "capacity_rejection_ratio": 0.33172112901265766
+  }
+}
