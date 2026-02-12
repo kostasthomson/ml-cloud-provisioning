@@ -1,0 +1,72 @@
+{
+  "small": {
+    "acceptance_rate": 0.31,
+    "avg_energy_kwh": 0.10199882791021145,
+    "std_energy_kwh": 0.019151615216608745,
+    "energy_per_task": 0.000669123093822411,
+    "total_tasks": 5000,
+    "total_accepted": 1550,
+    "total_rejected": 3450,
+    "capacity_rejections": 1302,
+    "policy_rejections": 2148,
+    "capacity_rejection_ratio": 0.3773913043478261,
+    "policy_rejection_pct": 62.26086956521739,
+    "avg_reject_prob_with_capacity": 0.017067010626352127
+  },
+  "medium": {
+    "acceptance_rate": 0.5206,
+    "avg_energy_kwh": 0.25430391436630684,
+    "std_energy_kwh": 0.03936383000499088,
+    "energy_per_task": 0.0009810996789016368,
+    "total_tasks": 5000,
+    "total_accepted": 2603,
+    "total_rejected": 2397,
+    "capacity_rejections": 1376,
+    "policy_rejections": 1021,
+    "capacity_rejection_ratio": 0.5740508969545265,
+    "policy_rejection_pct": 42.59491030454735,
+    "avg_reject_prob_with_capacity": 0.0012420666526596767
+  },
+  "large": {
+    "acceptance_rate": 0.6982,
+    "avg_energy_kwh": 0.3709326679234962,
+    "std_energy_kwh": 0.048359159229015604,
+    "energy_per_task": 0.0010644071373430435,
+    "total_tasks": 5000,
+    "total_accepted": 3491,
+    "total_rejected": 1509,
+    "capacity_rejections": 1196,
+    "policy_rejections": 313,
+    "capacity_rejection_ratio": 0.7925778661365143,
+    "policy_rejection_pct": 20.742213386348578,
+    "avg_reject_prob_with_capacity": 0.00025487726022530824
+  },
+  "high_load": {
+    "acceptance_rate": 0.3028,
+    "avg_energy_kwh": 0.08848146545094668,
+    "std_energy_kwh": 0.019592933320913185,
+    "energy_per_task": 0.0006053217905099591,
+    "total_tasks": 5000,
+    "total_accepted": 1514,
+    "total_rejected": 3486,
+    "capacity_rejections": 1520,
+    "policy_rejections": 1966,
+    "capacity_rejection_ratio": 0.43602983362019504,
+    "policy_rejection_pct": 56.39701663798049,
+    "avg_reject_prob_with_capacity": 0.00833233508880598
+  },
+  "stress_test": {
+    "acceptance_rate": 0.1558,
+    "avg_energy_kwh": 0.027495460123065814,
+    "std_energy_kwh": 0.012661727030782869,
+    "energy_per_task": 0.00035726266679275904,
+    "total_tasks": 5000,
+    "total_accepted": 779,
+    "total_rejected": 4221,
+    "capacity_rejections": 1313,
+    "policy_rejections": 2908,
+    "capacity_rejection_ratio": 0.3110637289741767,
+    "policy_rejection_pct": 68.89362710258233,
+    "avg_reject_prob_with_capacity": 0.03416485430082032
+  }
+}
