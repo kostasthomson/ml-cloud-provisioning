@@ -165,7 +165,16 @@ class CloudProvisioningEnv:
         self.rejected_count = 0
         self.timestamp = 0.0
 
+        self._capacity_scale = self._compute_capacity_scale()
+        self._max_task_memory = sum(c.total_memory for c in self.hw_configs) * 0.5
+
         self._init_hw_states()
+
+    def _compute_capacity_scale(self) -> float:
+        total_cpus = sum(c.total_cpus for c in self.hw_configs)
+        total_mem = sum(c.total_memory for c in self.hw_configs)
+        scale = min(total_cpus / 1024.0, total_mem / 7168.0)
+        return max(0.25, min(scale, 3.0))
 
     def _init_hw_states(self):
         """Initialize HW states from configs."""
@@ -322,35 +331,43 @@ class CloudProvisioningEnv:
     def _generate_task(self) -> TaskState:
         """Generate a realistic task."""
         task_type = np.random.choice(['small', 'medium', 'large', 'gpu', 'memory_intensive'])
+        s = self._capacity_scale
 
         if task_type == 'small':
-            num_vms = np.random.randint(1, 4)
+            num_vms = np.random.randint(1, max(2, int(3 * s)) + 1)
             vcpus = np.random.choice([2, 4])
             memory = np.random.choice([4, 8, 16])
             instructions = np.random.uniform(1e8, 1e10)
             requires_acc = False
         elif task_type == 'medium':
-            num_vms = np.random.randint(2, 8)
+            lo = max(1, int(2 * s))
+            hi = max(lo + 1, int(7 * s) + 1)
+            num_vms = np.random.randint(lo, hi)
             vcpus = np.random.choice([4, 8, 16])
             memory = np.random.choice([16, 32, 64])
             instructions = np.random.uniform(1e10, 1e12)
             requires_acc = False
         elif task_type == 'large':
-            num_vms = np.random.randint(4, 16)
+            lo = max(2, int(4 * s))
+            hi = max(lo + 1, int(15 * s) + 1)
+            num_vms = np.random.randint(lo, hi)
             vcpus = np.random.choice([8, 16, 32])
             memory = np.random.choice([64, 128, 256])
             instructions = np.random.uniform(1e12, 1e14)
             requires_acc = np.random.random() < 0.3
         elif task_type == 'gpu':
-            num_vms = np.random.randint(1, 8)
+            num_vms = np.random.randint(1, max(2, int(7 * s)) + 1)
             vcpus = np.random.choice([8, 16])
             memory = np.random.choice([32, 64, 128])
             instructions = np.random.uniform(1e11, 1e13)
             requires_acc = True
         else:
-            num_vms = np.random.randint(1, 4)
+            num_vms = np.random.randint(1, max(2, int(3 * s)) + 1)
             vcpus = np.random.choice([4, 8])
-            memory = np.random.choice([128, 256, 512])
+            memory_options = [m for m in [128, 256, 512] if m <= self._max_task_memory]
+            if not memory_options:
+                memory_options = [min(128, 256, 512)]
+            memory = np.random.choice(memory_options)
             instructions = np.random.uniform(1e9, 1e11)
             requires_acc = False
 
@@ -623,6 +640,8 @@ class DomainRandomizedEnv(CloudProvisioningEnv):
         if new_preset != self.current_preset:
             self.hw_configs = REALISTIC_HW_CONFIGS.get(new_preset, REALISTIC_HW_CONFIGS['medium'])
             self.current_preset = new_preset
+            self._capacity_scale = self._compute_capacity_scale()
+            self._max_task_memory = sum(c.total_memory for c in self.hw_configs) * 0.5
 
         self.current_step = 0
         self.running_tasks = []

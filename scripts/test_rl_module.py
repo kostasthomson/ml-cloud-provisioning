@@ -229,6 +229,63 @@ def test_reject_head_capacity_awareness():
     print("  Reject head capacity awareness: PASSED")
 
 
+def test_capacity_scaled_tasks():
+    print("\nTesting capacity-scaled task generation...")
+
+    from rl.environment import CloudProvisioningEnv, REALISTIC_HW_CONFIGS
+
+    env_stress = CloudProvisioningEnv(preset='stress_test', seed=42)
+    env_medium = CloudProvisioningEnv(preset='medium', seed=42)
+
+    assert env_stress._capacity_scale == 0.25, \
+        f"Expected stress_test scale 0.25, got {env_stress._capacity_scale}"
+    assert env_medium._capacity_scale == 1.0, \
+        f"Expected medium scale 1.0, got {env_medium._capacity_scale}"
+    print(f"  stress_test scale: {env_stress._capacity_scale}")
+    print(f"  medium scale: {env_medium._capacity_scale}")
+
+    stress_total_cpus = sum(c.total_cpus for c in env_stress.hw_configs)
+    stress_total_mem = sum(c.total_memory for c in env_stress.hw_configs)
+
+    stress_vms = []
+    medium_vms = []
+    n_tasks = 200
+
+    for _ in range(n_tasks):
+        task = env_stress._generate_task()
+        total_cpu = task.num_vms * task.vcpus_per_vm
+        total_mem = task.num_vms * task.memory_per_vm
+        assert total_cpu <= stress_total_cpus, \
+            f"stress_test task needs {total_cpu} CPUs but only {stress_total_cpus} available"
+        stress_vms.append(task.num_vms)
+
+    for _ in range(n_tasks):
+        task = env_medium._generate_task()
+        medium_vms.append(task.num_vms)
+
+    avg_stress = sum(stress_vms) / len(stress_vms)
+    avg_medium = sum(medium_vms) / len(medium_vms)
+    assert avg_stress < avg_medium, \
+        f"stress_test avg VMs ({avg_stress:.1f}) should be < medium ({avg_medium:.1f})"
+    print(f"  stress_test avg num_vms: {avg_stress:.2f}")
+    print(f"  medium avg num_vms: {avg_medium:.2f}")
+
+    assert env_stress._max_task_memory == stress_total_mem * 0.5
+    import numpy as np
+    orig_choice = np.random.choice
+    np.random.choice = lambda x, **kw: 'memory_intensive' if x == ['small', 'medium', 'large', 'gpu', 'memory_intensive'] else orig_choice(x, **kw)
+    try:
+        for _ in range(100):
+            task = env_stress._generate_task()
+            assert task.memory_per_vm <= env_stress._max_task_memory, \
+                f"Memory per VM {task.memory_per_vm} exceeds cap {env_stress._max_task_memory}"
+    finally:
+        np.random.choice = orig_choice
+    print(f"  memory_intensive cap on stress_test: {env_stress._max_task_memory}")
+
+    print("  Capacity-scaled tasks: PASSED")
+
+
 def main():
     print("=" * 50)
     print("RL Module Tests")
@@ -238,6 +295,7 @@ def main():
     test_reward_calculator()
     test_policy_network()
     test_reject_head_capacity_awareness()
+    test_capacity_scaled_tasks()
     test_agent()
 
     print("\n" + "=" * 50)
