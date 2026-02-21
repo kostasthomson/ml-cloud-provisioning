@@ -1,0 +1,39 @@
+2026-02-12 20:19:36,002 - scripts.utilization_analysis - INFO - Running analysis for preset: high_load
+2026-02-12 20:19:37,207 - scripts.utilization_analysis - INFO -   Episode 0: accepted=153, rejected=347, energy=0.0957 kWh
+2026-02-12 20:19:38,407 - scripts.utilization_analysis - INFO -   Episode 1: accepted=155, rejected=345, energy=0.0866 kWh
+2026-02-12 20:19:39,610 - scripts.utilization_analysis - INFO -   Episode 2: accepted=131, rejected=369, energy=0.1192 kWh
+2026-02-12 20:19:40,821 - scripts.utilization_analysis - INFO -   Episode 3: accepted=164, rejected=336, energy=0.0640 kWh
+2026-02-12 20:19:42,016 - scripts.utilization_analysis - INFO -   Episode 4: accepted=118, rejected=382, energy=0.1260 kWh
+2026-02-12 20:19:43,786 - scripts.utilization_analysis - INFO - Saved utilization plot: utilization_high_load_episode_0
+2026-02-12 20:19:43,786 - scripts.utilization_analysis - INFO - Running analysis for preset: stress_test
+2026-02-12 20:19:44,928 - scripts.utilization_analysis - INFO -   Episode 0: accepted=90, rejected=410, energy=0.0136 kWh
+2026-02-12 20:19:46,078 - scripts.utilization_analysis - INFO -   Episode 1: accepted=83, rejected=417, energy=0.0234 kWh
+2026-02-12 20:19:47,348 - scripts.utilization_analysis - INFO -   Episode 2: accepted=75, rejected=425, energy=0.0345 kWh
+2026-02-12 20:19:48,506 - scripts.utilization_analysis - INFO -   Episode 3: accepted=72, rejected=428, energy=0.0216 kWh
+2026-02-12 20:19:49,652 - scripts.utilization_analysis - INFO -   Episode 4: accepted=75, rejected=425, energy=0.0177 kWh
+2026-02-12 20:19:51,052 - scripts.utilization_analysis - INFO - Saved utilization plot: utilization_stress_test_episode_0
+2026-02-12 20:19:55,897 - scripts.utilization_analysis - INFO - Saved comparative plot: comparative_utilization
+2026-02-12 20:19:56,699 - scripts.utilization_analysis - INFO - Saved rejection analysis: rejection_analysis
+2026-02-12 20:19:56,700 - scripts.utilization_analysis - INFO - Analysis complete. Results saved to results/academic_v10/figures
+2026-02-12 20:19:56,714 - __main__ - INFO - ======================================================================
+2026-02-12 20:19:56,714 - __main__ - INFO - PHASE 4: LaTeX Table Generation
+2026-02-12 20:19:56,714 - __main__ - INFO - ======================================================================
+2026-02-12 20:19:56,714 - __main__ - INFO - Saved LaTeX: results/academic_v10/latex/generalization_table.tex
+2026-02-12 20:19:56,714 - __main__ - INFO - ======================================================================
+2026-02-12 20:19:56,714 - __main__ - INFO - PHASE 5: Final Report Generation
+2026-02-12 20:19:56,714 - __main__ - INFO - ======================================================================
+2026-02-12 20:19:56,715 - __main__ - INFO - Saved: results/academic_v10/evaluation_report.json
+2026-02-12 20:19:56,715 - __main__ - INFO -
+======================================================================
+2026-02-12 20:19:56,715 - __main__ - INFO - EVALUATION COMPLETE
+2026-02-12 20:19:56,715 - __main__ - INFO - ======================================================================
+2026-02-12 20:19:56,715 - __main__ - INFO -
+Generalization Results:
+2026-02-12 20:19:56,715 - __main__ - INFO -   small          : accept=0.310, policy_rej=62.3%
+2026-02-12 20:19:56,715 - __main__ - INFO -   medium         : accept=0.521, policy_rej=42.6%
+2026-02-12 20:19:56,715 - __main__ - INFO -   large          : accept=0.698, policy_rej=20.7%
+2026-02-12 20:19:56,715 - __main__ - INFO -   high_load      : accept=0.303, policy_rej=56.4%
+2026-02-12 20:19:56,715 - __main__ - INFO -   stress_test    : accept=0.156, policy_rej=68.9%
+2026-02-12 20:19:56,715 - __main__ - INFO -
+Outputs saved to: results/academic_v10
+2026-02-12 20:19:56,715 - __main__ - INFO - ======================================================================
