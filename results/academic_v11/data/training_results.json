@@ -1,0 +1,26 @@
+{
+  "timesteps": 2007040,
+  "episodes": 240,
+  "avg_reward": 34.7451804695502,
+  "training_time_sec": 25225.702234745026,
+  "fps": 79.56337200041989,
+  "model_path": "results/academic_v11/models/model_v11.pth",
+  "config": {
+    "domain_preset": "full_spectrum",
+    "curriculum": true,
+    "scarcity_aware": false,
+    "rejection_penalty": 0.3,
+    "acceptance_bonus": 0.35,
+    "scarcity_rejection_scale": 1.5,
+    "scarcity_acceptance_scale": 2.0,
+    "use_capacity_features": true,
+    "lr": 0.0003,
+    "lr_min": 1e-05,
+    "entropy_coef_start": 0.05,
+    "entropy_coef_end": 0.001,
+    "batch_size": 64,
+    "epochs": 10,
+    "gamma": 0.99,
+    "num_envs": 8
+  }
+}
